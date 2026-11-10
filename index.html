@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visitas Inmobiliarias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block">
+<style>
+/* Layout: navigation rail (desktop) / bottom bar (mobile) + content column; Material 3 light, android.com look. */
+:root{
+  --bg:#F7F9F5;
+  --surface:#FFFFFF;
+  --surface-2:#EEF3EC;
+  --surface-3:#E2EAE0;
+  --ink:#191C19;
+  --ink-2:#444944;
+  --ink-3:#6F756E;
+  --outline:#C5CCC3;
+  --android:#3DDC84;
+  --android-soft:#C9F5DA;
+  --primary:#0A6A3A;
+  --blue:#2F5EB8;
+  --blue-soft:#DCE6FF;
+  --amber:#7A4B00;
+  --amber-soft:#FFE2B8;
+  --orange:#8F3B00;
+  --orange-soft:#FFDCC7;
+  --red:#B3261E;
+  --red-soft:#FFDAD6;
+  --violet:#5B3F9E;
+  --violet-soft:#EADDFF;
+  --font-display:"Google Sans Flex","Google Sans","Roboto Flex",Roboto,system-ui,sans-serif;
+  --font-body:"Google Sans Flex","Google Sans","Roboto Flex",Roboto,system-ui,sans-serif;
+  --r-xl:28px; --r-l:20px; --r-m:14px;
+  --shadow:0 1px 2px rgba(20,40,25,.08),0 2px 8px rgba(20,40,25,.06);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4vw,40px);font-weight:650;letter-spacing:-.02em;line-height:1.1}
+h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:16px;font-weight:600}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--primary)}
+.ms{font-family:"Material Symbols Rounded";font-weight:450;font-style:normal;font-size:22px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:"liga";font-feature-settings:"liga";font-variation-settings:"FILL" 0,"opsz" 24;user-select:none;flex:none}
+.ms.fill{font-variation-settings:"FILL" 1,"opsz" 24}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* App shell */
+.app{display:grid;grid-template-columns:104px 1fr;min-height:100%}
+.rail{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 0;background:var(--bg)}
+.logo{width:52px;height:52px;border-radius:18px;background:var(--android);display:grid;place-items:center;margin-bottom:18px;color:#00210F}
+.logo .ms{font-size:30px}
+.navbtn{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;cursor:pointer;padding:0;width:80px;color:var(--ink-2);font-size:12px;font-weight:550}
+.navbtn .pill{width:56px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .2s;position:relative}
+.navbtn:hover .pill{background:var(--surface-3)}
+.navbtn[aria-current="page"]{color:var(--ink)}
+.navbtn[aria-current="page"] .pill{background:var(--android-soft)}
+.navbtn[aria-current="page"] .ms{font-variation-settings:"FILL" 1,"opsz" 24}
+.badge-dot{position:absolute;top:0;right:6px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+.main{min-width:0;padding:0 28px 48px}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:16px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px)}
+.brand{font-family:var(--font-display);font-weight:650;font-size:18px;display:none;align-items:center;gap:8px}
+.spacer{flex:1}
+.opchip{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 16px;border-radius:22px;border:1px solid var(--outline);background:var(--surface);cursor:pointer;font-weight:600;max-width:100%}
+.opchip:hover{background:var(--surface-2)}
+.opchip span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account{display:flex;align-items:center;gap:10px;height:44px;padding:0 6px 0 14px;border-radius:22px;background:var(--surface);border:1px solid var(--outline);cursor:pointer}
+.account:hover{background:var(--surface-2)}
+.account .who{display:flex;flex-direction:column;line-height:1.1;text-align:left}
+.account .who small{color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.account .who b{font-size:14px;font-weight:600}
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.av-super{background:var(--ink)!important;box-shadow:0 0 0 2px var(--android)}
+.av-broker{background:var(--primary)}.av-asistente{background:var(--blue)}.av-cliente{background:var(--violet)}
+
+.page-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;margin:8px 0 22px}
+.page-head .sub{color:var(--ink-2);margin-top:6px;font-size:15px}
+.page-head .actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 20px;border-radius:20px;border:0;cursor:pointer;font-weight:600;font-size:14px;white-space:nowrap;text-decoration:none;transition:background .15s,box-shadow .15s}
+.btn .ms{font-size:20px}
+.btn-filled{background:var(--ink);color:#fff}
+.btn-filled:hover{background:#2E332E;box-shadow:var(--shadow)}
+.btn-green{background:var(--android);color:#00210F}
+.btn-green:hover{background:#34CB78}
+.btn-tonal{background:var(--android-soft);color:#00391C}
+.btn-tonal:hover{background:#B5EECB}
+.btn-outline{background:transparent;border:1px solid var(--outline);color:var(--ink)}
+.btn-outline:hover{background:var(--surface-2)}
+.btn-text{background:transparent;color:var(--primary);padding:0 12px}
+.btn-text:hover{background:var(--surface-2)}
+.btn-danger{background:var(--red-soft);color:var(--red)}
+.btn-danger:hover{background:#FFC9C3}
+.btn-sm{height:34px;padding:0 14px;font-size:13px}
+.icon-btn{width:40px;height:40px;border-radius:20px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--ink-2)}
+.icon-btn:hover{background:var(--surface-3)}
+.icon-btn:disabled{opacity:.35;cursor:default;background:transparent}
+.fab{position:fixed;right:28px;bottom:28px;z-index:30;height:64px;padding:0 24px 0 20px;border-radius:20px;background:var(--android);color:#00210F;border:0;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;box-shadow:0 4px 14px rgba(10,106,58,.25),0 1px 3px rgba(0,0,0,.12)}
+.fab:hover{background:#34CB78}
+.fab .ms{font-size:26px}
+
+/* Chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--outline);background:var(--surface);cursor:pointer;font-weight:550;font-size:13px;display:inline-flex;align-items:center;gap:6px;color:var(--ink-2)}
+.fchip:hover{background:var(--surface-2)}
+.fchip[aria-pressed="true"]{background:var(--android-soft);border-color:transparent;color:#00391C}
+.fchip .n{font-variant-numeric:tabular-nums;opacity:.75}
+.status{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:650;white-space:nowrap}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.s-nueva{background:var(--blue-soft);color:var(--blue)}
+.s-leida{background:var(--android-soft);color:var(--primary)}
+.s-por_visitar{background:var(--violet-soft);color:var(--violet)}
+.s-oferta{background:var(--amber-soft);color:var(--amber)}
+.s-negociacion{background:var(--orange-soft);color:var(--orange)}
+.s-reservada{background:#0A6A3A;color:#fff}
+.s-descartada{background:var(--surface-3);color:var(--ink-3)}
+.s-pendiente{background:var(--amber-soft);color:var(--amber)}
+.s-rechazada{background:var(--red-soft);color:var(--red)}
+.s-propuesta{background:var(--amber-soft);color:var(--amber)}
+.s-confirmada{background:var(--android-soft);color:var(--primary)}
+
+/* Summary strip */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.stat{background:var(--surface);border-radius:var(--r-l);padding:16px 18px;display:flex;flex-direction:column;gap:2px;border:1px solid transparent}
+.stat b{font-family:var(--font-display);font-size:30px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{color:var(--ink-2);font-size:13px;font-weight:550}
+.stat.click{cursor:pointer;text-align:left;font:inherit;color:inherit}
+.stat.click:hover{border-color:var(--outline)}
+.stat.alert{background:var(--amber-soft)}
+.stat.alert span{color:var(--amber)}
+
+/* Properties */
+.props-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.pcard{background:var(--surface);border-radius:var(--r-xl);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s}
+.pcard:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(20,40,25,.12)}
+.pimg{position:relative;aspect-ratio:16/10;background:var(--surface-2)}
+.pimg img{width:100%;height:100%;object-fit:cover;display:block}
+.pimg .tl{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.pimg .tl .status{box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.rankbadge{position:absolute;right:12px;top:12px;width:38px;height:38px;border-radius:13px;background:var(--ink);color:#fff;font-family:var(--font-display);font-weight:700;display:grid;place-items:center;font-size:15px}
+.portal{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.92);border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--ink-2)}
+.photo-count{position:absolute;right:12px;bottom:12px;background:rgba(25,28,25,.7);color:#fff;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:600;display:flex;gap:4px;align-items:center}
+.photo-count .ms{font-size:14px}
+.pbody{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
+.price{font-family:var(--font-display);font-size:22px;font-weight:650;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.exp{color:var(--ink-3);font-size:13px;font-variant-numeric:tabular-nums}
+.loc{display:flex;align-items:center;gap:4px;color:var(--ink-2);font-size:13px}
+.loc .ms{font-size:17px}
+.specs{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--ink-2);font-size:13px;margin-top:4px}
+.specs span{display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.specs .ms{font-size:17px;color:var(--ink-3)}
+.pactions{display:flex;gap:8px;margin-top:auto;padding-top:12px;flex-wrap:wrap;align-items:center}
+.card-tools{flex-basis:100%;display:flex;justify-content:space-between;align-items:center;margin:2px -8px -8px}
+.card-tools .left{display:flex;gap:2px}
+.card-tools .icon-btn{color:var(--ink-3);text-decoration:none}
+.card-tools .icon-btn.wa{color:#1DA851}
+.card-tools .icon-btn.wa:hover{background:#DCF8E6;color:#128C3E}
+.card-tools .icon-btn.ok:hover{background:var(--android-soft);color:var(--primary)}
+.card-tools .icon-btn.ok.is-on{color:var(--primary)}
+.card-tools .icon-btn.ok.is-on:hover{background:var(--amber-soft);color:var(--amber)}
+.card-tools .icon-btn.cal:hover{background:var(--android-soft);color:var(--primary)}
+.card-tools .icon-btn.del-card:hover{background:var(--red-soft);color:var(--red)}
+.vpick{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;background:var(--surface-2);border-radius:16px;padding:10px}
+.vpick img{width:72px;height:54px;border-radius:10px;object-fit:cover;display:block}
+.vpick b{display:block;font-weight:600}
+.vpick small{color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+
+
+.panel{background:var(--surface);border-radius:var(--r-xl);padding:20px;box-shadow:var(--shadow)}
+.panel h2{margin-bottom:4px}
+.panel .hint{color:var(--ink-3);font-size:13px;margin:0 0 14px}
+.rank-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rank-item{display:grid;grid-template-columns:30px 56px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:16px;background:var(--surface-2)}
+.rank-item .no{font-family:var(--font-display);font-weight:700;font-size:18px;text-align:center;font-variant-numeric:tabular-nums}
+.rank-item img{width:56px;height:44px;border-radius:10px;object-fit:cover;display:block}
+.rank-item .t{min-width:0}
+.rank-item .t b{display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-item .t small{color:var(--ink-3);font-size:12px;font-variant-numeric:tabular-nums}
+.rank-item .mv{display:flex}
+.rank-item .mv .icon-btn{width:32px;height:32px}
+.rank-item .mv .ms{font-size:20px}
+.empty{padding:28px;text-align:center;color:var(--ink-3);background:var(--surface);border-radius:var(--r-xl);border:1px dashed var(--outline)}
+.empty .ms{font-size:36px;display:block;margin:0 auto 8px;color:var(--outline)}
+.section-title{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+.section-title .count{color:var(--ink-3);font-weight:600;font-size:14px}
+details.discarded summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;margin:26px 0 14px;font-family:var(--font-display);font-weight:600;font-size:18px}
+details.discarded summary::-webkit-details-marker{display:none}
+details.discarded[open] summary .ms{transform:rotate(90deg)}
+.pcard.dim .pimg{opacity:.6;filter:grayscale(.5)}
+.pcard.dim .price,.pcard.dim h3{color:var(--ink-2)}
+
+/* Agenda */
+.pref-banner{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--android-soft);border-radius:var(--r-l);padding:14px 18px;margin-bottom:18px;color:#00391C}
+.pref-banner b{font-weight:650}
+.pref-banner .slot{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.6);border-radius:10px;padding:4px 10px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.weeknav{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.weeknav h2{margin-left:6px;font-size:18px}
+.legend{display:flex;gap:14px;margin-left:auto;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.week-scroll{overflow-x:auto;background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:8px 8px 12px}
+.week{min-width:820px}
+.wk-head{display:grid;grid-template-columns:52px repeat(7,1fr);padding:6px 0 8px}
+.wk-head div{text-align:center;font-size:12px;color:var(--ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.wk-head div b{display:block;font-family:var(--font-display);font-size:22px;color:var(--ink);font-weight:550;letter-spacing:0;margin:2px auto 0;width:40px;height:40px;line-height:40px;border-radius:50%;font-variant-numeric:tabular-nums}
+.wk-head div.today b{background:var(--ink);color:#fff}
+.wk-body{display:grid;grid-template-columns:52px repeat(7,1fr);position:relative}
+.wk-times{position:relative}
+.wk-times span{position:absolute;right:8px;font-size:11px;color:var(--ink-3);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.wk-day{position:relative;border-left:1px solid var(--surface-3);background-image:repeating-linear-gradient(to bottom,var(--surface-3) 0,var(--surface-3) 1px,transparent 1px,transparent var(--rowh))}
+.wk-day.today{background-color:#FAFDF9}
+.pref-band{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,rgba(61,220,132,.16) 0 6px,rgba(61,220,132,.08) 6px 12px);border-left:3px solid var(--android)}
+.ev{position:absolute;left:4px;right:4px;border-radius:10px;padding:4px 8px;font-size:11px;line-height:1.2;overflow:hidden;cursor:pointer;border:0;text-align:left;display:flex;flex-direction:column;gap:1px}
+.ev b{font-weight:650;font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev small{font-variant-numeric:tabular-nums;opacity:.85}
+.ev.confirmada{background:var(--primary);color:#fff}
+.ev.propuesta{background:#FFF6E8;color:var(--amber);border:1.5px dashed #D99A3A}
+.ev.done{background:var(--surface-3);color:var(--ink-2)}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:2}
+.now-line::before{content:"";position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)}
+.visit-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:22px;align-items:start}
+.vcard{background:var(--surface);border-radius:var(--r-l);padding:14px;display:grid;grid-template-columns:64px 1fr;gap:12px;box-shadow:var(--shadow)}
+.vdate{background:var(--surface-2);border-radius:14px;text-align:center;padding:8px 4px;display:flex;flex-direction:column;justify-content:center}
+.vdate small{font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase}
+.vdate b{font-family:var(--font-display);font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}
+.vdate span{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
+.vcard .vt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.vcard .vt h3{font-size:14px}
+.vcard .vt .addr{font-size:13px;color:var(--ink-2)}
+.vcard .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.warn{display:flex;gap:6px;align-items:flex-start;color:var(--amber);font-size:12px;font-weight:600}
+.warn .ms{font-size:16px}
+.result{background:var(--surface-2);border-radius:12px;padding:8px 10px;font-size:13px;color:var(--ink-2)}
+.col-title{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.col-title .count{color:var(--ink-3);font-weight:600}
+.stack{display:flex;flex-direction:column;gap:12px}
+
+/* Pipeline */
+.board-scroll{overflow-x:auto;padding-bottom:12px}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,1fr);gap:14px;min-width:min-content}
+.bcol{background:var(--surface-2);border-radius:var(--r-l);padding:12px;min-height:200px;display:flex;flex-direction:column;gap:10px}
+.bcol header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 4px}
+.bcol header .n{font-weight:700;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.bcard{background:var(--surface);border-radius:16px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow);border:0;text-align:left;width:100%}
+.bcard:hover{box-shadow:0 4px 14px rgba(20,40,25,.12)}
+.bcard .top{display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center}
+.bcard img{width:48px;height:40px;border-radius:9px;object-fit:cover;display:block}
+.bcard b{font-size:13px;font-weight:600;display:block;line-height:1.25}
+.bcard small{color:var(--ink-3);font-size:12px;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.progress{height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--android);border-radius:3px}
+
+/* Operation */
+.op-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start}
+.linkbox{display:flex;gap:8px;align-items:center;background:var(--surface-2);border-radius:14px;padding:6px 6px 6px 14px;margin:10px 0 6px}
+.linkbox code{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Menlo,monospace}
+.client-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--surface-3)}
+.client-row:first-of-type{border-top:0}
+.client-row .info{flex:1;min-width:0}
+.client-row .info small{color:var(--ink-3);display:block}
+.oplist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.oplist li button{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:0;background:var(--surface-2);cursor:pointer;text-align:left}
+.oplist li button[aria-current="true"]{background:var(--android-soft)}
+.oplist li button span.t{flex:1;font-weight:600}
+.oplist li button small{color:var(--ink-3);font-variant-numeric:tabular-nums}
+.note{font-size:13px;color:var(--ink-2);background:var(--blue-soft);border-radius:14px;padding:12px 14px;display:flex;gap:10px}
+.note .ms{color:var(--blue);font-size:20px}
+
+/* Dialog */
+dialog{border:0;padding:0;border-radius:var(--r-xl);background:var(--surface);color:var(--ink);width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 48px);box-shadow:0 12px 40px rgba(0,0,0,.2)}
+dialog.wide{width:min(920px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(20,28,22,.42)}
+.dlg{display:flex;flex-direction:column;max-height:calc(100vh - 48px)}
+.dlg-head{display:flex;align-items:center;gap:12px;padding:20px 20px 8px 24px}
+.dlg-head h2{flex:1;font-size:22px}
+.dlg-body{padding:8px 24px 16px;overflow:auto}
+.dlg-foot{display:flex;gap:10px;justify-content:flex-end;padding:12px 24px 20px;flex-wrap:wrap;border-top:1px solid var(--surface-3)}
+.form{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.field{display:flex;flex-direction:column;gap:5px;grid-column:span 6}
+.field.h{grid-column:span 3}.field.t{grid-column:span 2}
+.field label{font-size:12px;font-weight:650;color:var(--ink-2)}
+.field input,.field select,.field textarea{height:48px;border-radius:12px;border:1px solid var(--outline);background:var(--surface);padding:0 14px;width:100%}
+.field textarea{height:auto;min-height:80px;padding:12px 14px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--primary);outline-offset:-1px;border-color:transparent}
+.field .help{font-size:12px;color:var(--ink-3)}
+.urlrow{display:flex;gap:8px}
+.urlrow input{flex:1}
+.field input.filled{border-color:var(--android);background:#F2FCF6;box-shadow:0 0 0 1px var(--android)}
+.paste-box{background:var(--surface-2);border-radius:16px;padding:12px}
+.paste-box textarea{min-height:70px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ms.spin{animation:spin 1s linear infinite}
+.found{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--primary);font-weight:600}
+.portals{display:flex;gap:8px;flex-wrap:wrap}
+.portals a{font-size:12px;font-weight:650;text-decoration:none;background:var(--surface-2);color:var(--ink-2);padding:6px 10px;border-radius:10px;display:inline-flex;gap:4px;align-items:center}
+.portals a:hover{background:var(--surface-3)}
+.portals a .ms{font-size:15px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{position:relative;width:84px;height:64px;border-radius:12px;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:12px;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;display:grid;place-items:center}
+.thumb button .ms{font-size:16px}
+.upload{width:84px;height:64px;border-radius:12px;border:1.5px dashed var(--outline);display:grid;place-items:center;cursor:pointer;color:var(--ink-3)}
+.upload:hover{background:var(--surface-2)}
+.upload input{display:none}
+.daypick{display:flex;gap:6px;flex-wrap:wrap}
+.daypick button{width:42px;height:36px;border-radius:10px;border:1px solid var(--outline);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600}
+.daypick button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.slot-edit{display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--surface-2);border-radius:16px}
+.slot-edit .times{display:flex;gap:10px;align-items:center}
+.slot-edit .times input{height:40px;border-radius:10px;border:1px solid var(--outline);padding:0 10px;background:var(--surface)}
+
+/* Detail */
+.gallery{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:20px}
+.gallery img{flex:none;width:100%;max-width:560px;aspect-ratio:16/10;object-fit:cover;border-radius:20px;scroll-snap-align:start}
+.detail-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.fact{background:var(--surface-2);border-radius:14px;padding:10px 12px}
+.fact small{display:block;font-size:11px;color:var(--ink-3);font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.fact b{font-family:var(--font-display);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.box{background:var(--surface-2);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.box h3{display:flex;align-items:center;gap:8px}
+.box .form{gap:10px}
+.box .field input,.box .field select,.box .field textarea{height:42px}
+.box .field textarea{height:auto}
+.doclist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.doclist li{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:10px;padding:8px 10px;font-size:13px}
+.doclist li span.t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doclist small{color:var(--ink-3)}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.log li{display:grid;grid-template-columns:76px 1fr;gap:8px}
+.log li small{color:var(--ink-3);font-variant-numeric:tabular-nums}
+.private{display:flex;align-items:center;gap:8px;background:var(--amber-soft);color:var(--amber);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600}
+.private a{color:inherit}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:550;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--primary)}
+.rate{display:flex;gap:8px;flex-wrap:wrap}
+.rate button{flex:1;min-width:120px;padding:12px;border-radius:16px;border:1px solid var(--outline);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;font-size:13px}
+.rate button .ms{font-size:28px}
+.rate button[aria-pressed="true"]{background:var(--android-soft);border-color:transparent}
+
+/* Login */
+.login{min-height:100%;display:grid;place-items:center;padding:24px;background:radial-gradient(1200px 500px at 85% -10%,#D6F7E3 0,transparent 60%),radial-gradient(800px 400px at -10% 110%,#E4ECFF 0,transparent 60%),var(--bg)}
+.login-card{width:min(480px,100%);background:var(--surface);border-radius:32px;padding:32px;box-shadow:0 10px 40px rgba(20,40,25,.1);display:flex;flex-direction:column;gap:18px}
+.login-card .logo{margin:0}
+.login-card p{margin:0;color:var(--ink-2)}
+.role-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.role-pick button{border:1px solid var(--outline);background:var(--surface);border-radius:18px;padding:14px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.role-pick button[aria-pressed="true"]{background:var(--android-soft);border-color:transparent}
+.gbtn{height:48px;border-radius:24px;border:1px solid var(--outline);background:#fff;display:flex;align-items:center;justify-content:center;gap:12px;font-weight:600;cursor:pointer;font-size:15px}
+.gbtn:hover{background:var(--surface-2)}
+.gbtn svg{width:20px;height:20px}
+
+/* Menu */
+.menu{position:fixed;z-index:60;background:var(--surface);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:8px;min-width:240px}
+.menu button{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;background:none;border-radius:10px;cursor:pointer;text-align:left;font-size:14px}
+.menu button:hover{background:var(--surface-2)}
+.menu hr{border:0;border-top:1px solid var(--surface-3);margin:6px 0}
+.menu .lbl{font-size:11px;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:6px 12px}
+
+.bell{position:relative;width:44px;height:44px;border-radius:22px;background:var(--surface);border:1px solid var(--outline)}
+.bell .badge-dot{top:2px;right:2px}
+.notice{display:flex;gap:12px;align-items:flex-start;background:var(--red-soft);color:#5C1410;border-radius:var(--r-l);padding:14px 16px;margin-bottom:12px}
+.notice .ms{color:var(--red)}
+.notice .txt{flex:1;font-size:14px}
+.notice .txt small{display:block;color:#8C3A33;margin-top:2px}
+.notice .acts{display:flex;gap:6px;flex-wrap:wrap}
+.menu .nitem{align-items:flex-start}
+.menu .nitem small{display:block;color:var(--ink-3);margin-top:2px}
+.menu .nitem.unread{background:#FFF4F2}
+.s-rechazada_cliente{background:var(--red-soft);color:var(--red)}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-3);padding:0 6px;white-space:nowrap}
+.sync[data-state="error"]{color:var(--red)}
+.invite-card{display:flex;gap:12px;align-items:flex-start;background:var(--android-soft);border-radius:18px;padding:14px 16px;color:#00391C;font-size:14px}
+.invite-card small{display:block;margin-top:4px;color:#2B5A3D}
+.gsi-box{display:flex;justify-content:center;min-height:44px}
+.checks{display:flex;flex-wrap:wrap;gap:6px 16px}
+.env-card h3{font-size:16px}
+.env-card.off{opacity:.7}
+@media (max-width:840px){.sync{display:none}}
+.snack{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#2E322E;color:#F0F2EC;padding:14px 20px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:80;max-width:calc(100vw - 32px)}
+.snack.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:1100px){.props-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}}
+@media (max-width:840px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;top:auto;bottom:0;left:0;right:0;height:76px;flex-direction:row;justify-content:space-around;padding:8px 4px;z-index:40;background:var(--surface-2);gap:0}
+  .rail .logo{display:none}
+  .navbtn{width:auto;flex:1}
+  .main{padding:0 16px 120px}
+  .brand{display:flex}
+  .brand .logo{width:36px;height:36px;border-radius:12px;margin:0}
+  .brand .logo .ms{font-size:22px}
+  .account .who{display:none}
+  .account{padding:0 4px}
+  .fab{bottom:92px;right:16px;height:56px;padding:0 18px 0 16px}
+  .facts{grid-template-columns:repeat(2,1fr)}
+  .field.h,.field.t{grid-column:span 3}
+}
+@media (max-width:480px){.opchip{max-width:150px}.field.h,.field.t{grid-column:span 6}.role-pick{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<dialog id="dlg"></dialog>
+<div id="snack" class="snack" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+const KEY = "visitas-inmo-v2";
+const TZ = "America/Argentina/Buenos_Aires";
+const DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DAYS_LONG = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const ROLES = {
+  broker:{label:"Broker",icon:"verified_user",desc:"Aprueba propiedades y visitas"},
+  asistente:{label:"Asistente",icon:"support_agent",desc:"Carga propiedades y arma la agenda"},
+  cliente:{label:"Cliente",icon:"person",desc:"Prioriza y agenda sus visitas"}
+};
+const STATUS = {
+  nueva:{label:"Nueva"}, leida:{label:"Leída"}, por_visitar:{label:"Por visitar"},
+  oferta:{label:"Oferta"}, negociacion:{label:"En negociación"}, reservada:{label:"Reservada"}, descartada:{label:"Descartada"}
+};
+const STATUS_KEYS = Object.keys(STATUS);
+const RATING = {
+  encanto:{label:"Me encantó",icon:"favorite"},
+  interesante:{label:"Interesante",icon:"thumb_up"},
+  no:{label:"No me convenció",icon:"thumb_down"}
+};
+const BARRIOS = ["palermo","belgrano","nunez","colegiales","villa-crespo","caballito","recoleta","almagro","coghlan","saavedra","villa-urquiza","chacarita","san-telmo","barrio-norte","retiro","puerto-madero","flores","villa-devoto","olivos","vicente-lopez","martinez","san-isidro","villa-ortuzar","parque-chas","boedo","balvanera","monserrat","nordelta","tigre"];
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = p => (p||"id") + Math.random().toString(36).slice(2,9);
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseYmd = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const toMin = t => { const [h,m] = t.split(":").map(Number); return h*60+m; };
+const fromMin = m => pad(Math.floor(m/60))+":"+pad(m%60);
+const fmtNum = n => (n==null||n==="") ? "—" : Number(n).toLocaleString("es-AR");
+const usd = n => (n==null||n==="") ? "—" : "USD " + fmtNum(n);
+const ars = n => (n==null||n==="") ? "—" : "$ " + fmtNum(n);
+const fmtDateShort = s => { const d = parseYmd(s); return DAYS[d.getDay()]+" "+d.getDate()+" "+MONTHS[d.getMonth()]; };
+const fmtDateLong = s => { const d = parseYmd(s); return DAYS_LONG[d.getDay()]+" "+d.getDate()+" de "+MONTHS[d.getMonth()]; };
+const nowStamp = () => { const d = new Date(); return ymd(d); };
+const initials = n => (n||"?").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
+const kb = b => b>1048576 ? (b/1048576).toFixed(1)+" MB" : Math.max(1,Math.round(b/1024))+" KB";
+
+function placeholder(seed){
+  const pals = [["#D7F5E3","#3DDC84","#0A6A3A","#F3FBF6"],["#DCE6FF","#7FA7F5","#2F5EB8","#F4F7FF"],["#FFE9C9","#F5B14C","#7A4B00","#FFF8EE"],["#EADDFF","#B69DF8","#5B3F9E","#F8F4FF"],["#FFDCE6","#F28BAE","#7D2948","#FFF5F8"],["#D3F1F1","#5CC8C8","#0D5C5C","#F2FBFB"]];
+  let h=0; for (const c of String(seed)) h = (h*31 + c.charCodeAt(0)) >>> 0;
+  const p = pals[h % pals.length];
+  const floors = 4 + (h % 5), bw = 150, bx = 70 + (h % 60), fh = 26;
+  const by = 250 - floors*fh;
+  let win = "";
+  for (let f=0; f<floors; f++) for (let c=0;c<4;c++){
+    win += `<rect x="${bx+14+c*34}" y="${by+8+f*fh}" width="22" height="14" rx="3" fill="${(f+c+h)%3===0? p[3] : p[0]}" opacity=".95"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p[3]}"/><stop offset="1" stop-color="${p[0]}"/></linearGradient></defs><rect width="400" height="250" fill="url(#g)"/><circle cx="${320-(h%80)}" cy="62" r="26" fill="${p[1]}" opacity=".55"/><rect x="${bx}" y="${by}" width="${bw}" height="${250-by}" rx="10" fill="${p[2]}"/>${win}<rect x="${bx+bw+18}" y="170" width="110" height="80" rx="8" fill="${p[1]}"/><path d="M${bx+bw+10} 176 L${bx+bw+73} 132 L${bx+bw+136} 176 Z" fill="${p[2]}" opacity=".85"/><rect x="${bx+bw+60}" y="206" width="26" height="44" rx="4" fill="${p[3]}"/><rect y="238" width="400" height="12" fill="${p[2]}" opacity=".25"/></svg>`;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+}
+const cover = p => (p.photos && p.photos[0]) || placeholder(p.id + p.title);
+
+function detectPortal(url){
+  const u = (url||"").toLowerCase();
+  if (u.includes("zonaprop")) return "Zonaprop";
+  if (u.includes("remax")) return "RE/MAX";
+  if (u.includes("argenprop")) return "Argenprop";
+  if (u.includes("mercadolibre")) return "Mercado Libre";
+  return "";
+}
+const deacc = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function toNumber(str){
+  if (str==null) return null;
+  let t = String(str).trim().replace(/\s/g,"");
+  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g,""));
+  t = t.replace(",", ".");
+  const n = parseFloat(t); return isNaN(n) ? null : Math.round(n);
+}
+function parseText(raw){
+  const t = String(raw||"").replace(/\u00a0/g," ");
+  const T = deacc(t);
+  const out = {};
+  const first = (res, src) => { for (const re of res){ const m = (src||T).match(re); if (m) return m; } return null; };
+  let m = first([/(?:USD|U\$S|US\$|u\$s|dolares)\s*([\d][\d.,]{2,})/i]);
+  if (m) out.price = toNumber(m[1]);
+  m = first([/expensas[^\d\n]{0,25}([\d][\d.,]{2,})/i, /([\d][\d.,]{2,})\s*(?:ARS|pesos)?\s*(?:de\s*)?expensas/i]);
+  if (m) out.expensas = toNumber(m[1]);
+  m = first([/(?:sup(?:erficie)?\.?\s*total|total)[^\d\n]{0,15}(\d{2,4}(?:[.,]\d+)?)\s*m/i, /(\d{2,4}(?:[.,]\d+)?)\s*m(?:²|2)\s*(?:tot|total)/i, /(\d{2,4}(?:[.,]\d+)?)\s*m(?:²|2)/i]);
+  if (m) out.m2 = toNumber(m[1]);
+  m = first([/(\d{1,2})[ \t]*amb/i, /ambientes[ \t]*:?[ \t]*(\d{1,2})/i]);
+  if (m) out.amb = +m[1];
+  else { m = first([/(\d{1,2})[ \t]*dorm/i, /dormitorios\s*:?\s*(\d{1,2})/i]); if (m) out.amb = +m[1] + 1; }
+  m = first([/(\d{1,2})[ \t]*banos?\b/i, /banos[ \t]*:?[ \t]*(\d{1,2})/i]);
+  if (m) out.banos = +m[1];
+  m = first([/(\d{1,2})[ \t]*coch/i, /cocheras?[ \t]*:?[ \t]*(\d{1,2})/i, /garages?\s*:?\s*(\d{1,2})/i]);
+  if (m) out.cocheras = +m[1]; else if (/sin cochera/i.test(T)) out.cocheras = 0;
+  m = first([/numero de piso de la unidad\s*:?\s*(\d{1,2}|PB)/i, /\bpiso\s*:?\s*(\d{1,2}|PB)\b/i, /(\d{1,2})\s*(?:°|º)\s*piso/i, /\bplanta baja\b/i]);
+  if (m) out.piso = m[1] ? (m[1].toUpperCase()==="PB" ? "PB" : +m[1]) : "PB";
+  m = first([/cantidad de pisos\s*:?\s*(\d{1,2})/i, /(\d{1,2})[ \t]*pisos\b/i, /pisos del edificio\s*:?\s*(\d{1,2})/i]);
+  if (m) out.pisos = +m[1];
+  m = t.match(/(?:\+?54\s*9?\s*)?\(?(?:011|11|2\d{2,3}|3\d{2,3})\)?[\s-]?(?:15[\s-]?)?\d{3,4}[\s-]?\d{4}/);
+  if (m) out.phone = m[0].trim();
+  const lines = t.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  const addr = lines.find(l => l.length < 70 && /^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ.'\s]{2,40}\s(?:al\s)?\d{2,5}\b/.test(l) && !/USD|U\$S|m²|m2|amb|expensas|ba[ñn]o|dorm|piso|\$/i.test(l));
+  if (addr) out.address = addr.split(",")[0].trim();
+  const lowT = T.toLowerCase().replace(/\s+/g,"-");
+  for (const b of BARRIOS){ if (lowT.includes(b)) { out.barrio = b.split("-").map(w=>w==="nunez"?"Núñez":w[0].toUpperCase()+w.slice(1)).join(" "); break; } }
+  const titleLine = lines.find(l => l.length>12 && l.length<110 && !/[>|»]/.test(l) && /(departamento|depto|casa|ph|monoambiente|duplex|loft)/i.test(l) && !/USD|U\$S|\$/.test(l));
+  if (titleLine) out.title = titleLine.replace(/\s+/g," ");
+  else if (out.amb) out.title = "Departamento " + out.amb + " ambientes";
+  return out;
+}
+function parseListing(url){
+  const out = {};
+  let path = "";
+  url = String(url||"").trim(); if (url && !/^https?:\/\//i.test(url)) url = "https://" + url;
+  try { const u = new URL(url); if (!u.hostname.includes(".")) return null; path = decodeURIComponent(u.pathname + " " + u.search).toLowerCase(); } catch(e){ return null; }
+  out.portal = detectPortal(url);
+  const slug = path.replace(/[_/.]/g,"-");
+  let m = slug.match(/(\d)-amb/); if (m) out.amb = +m[1];
+  m = slug.match(/(\d)-dorm/); if (m && !out.amb) out.amb = +m[1] + 1;
+  m = slug.match(/(\d{2,4})-?m2/); if (m) out.m2 = +m[1];
+  m = slug.match(/(\d)-ban/); if (m) out.banos = +m[1];
+  m = slug.match(/(\d)-cochera/); if (m) out.cocheras = +m[1];
+  for (const b of BARRIOS){ if (slug.includes(b)) { out.barrio = b.split("-").map(w=>w==="nunez"?"Núñez":w[0].toUpperCase()+w.slice(1)).join(" "); break; } }
+  const tipo = /\bph\b|-ph-/.test(slug) ? "PH" : slug.includes("casa") ? "Casa" : slug.includes("departamento") || slug.includes("depto") ? "Departamento" : "";
+  if (tipo || out.amb) out.title = [tipo||"Propiedad", out.amb ? out.amb+" ambientes" : ""].filter(Boolean).join(" ");
+  return out;
+}
+const mapsUrl = q => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q + ", Buenos Aires, Argentina");
+function waUrl(p){
+  let d = String(p.phone||"").replace(/\D/g,"");
+  if (d && !d.startsWith("54")) d = "54" + d.replace(/^0/,"");
+  if (d.startsWith("54") && !d.startsWith("549")) d = "549" + d.slice(2);
+  const txt = `Hola, te escribo por la propiedad de ${p.address||p.title}${p.barrio?", "+p.barrio:""}${p.portal?" publicada en "+p.portal:""}. ¿Está disponible? Me gustaría coordinar una visita.${p.url?"\n"+p.url:""}`;
+  return "https://wa.me/" + d + "?text=" + encodeURIComponent(txt);
+}
+function gcalUrl(v, p){
+  const d = v.date.replace(/-/g,"");
+  const s = toMin(v.time), e = s + (v.duration||45);
+  const t = m => pad(Math.floor(m/60))+pad(m%60)+"00";
+  const q = new URLSearchParams({action:"TEMPLATE", text:"Visita: "+p.title, dates:d+"T"+t(s)+"/"+d+"T"+t(e), ctz:TZ, location:v.address, details:"Visita coordinada con tu broker.\n"+usd(p.price)+" · "+p.amb+" amb · "+p.m2+" m²\nAviso: "+(p.url||"")});
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
+
+/* ---------- data ---------- */
+function seed(){
+  const t = today();
+  const P = (o) => Object.assign({id:uid("p"), photos:[], approval:"aprobada", status:"nueva", rank:null, offer:{price:"",deposit:"",docs:[]}, nego:{counter:"",docs:[]}, reserve:{progress:0,notary:false,costs:"",commission:"",deedDate:"",news:[]}, log:[], choiceNote:""}, o);
+  const props = [
+    P({id:"p1",title:"Departamento 3 ambientes con balcón",barrio:"Palermo Soho",address:"Gorriti 4800",amb:3,price:198000,expensas:185000,m2:78,banos:2,cocheras:1,piso:4,pisos:8,phone:"+54 11 5263-4410",portal:"Zonaprop",url:"https://www.zonaprop.com.ar/propiedades/departamento-3-ambientes-palermo-soho-gorriti-4800.html",status:"por_visitar",rank:1,log:[{date:ymd(addDays(t,-6)),text:"Cargada por Asistente"},{date:ymd(addDays(t,-5)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-4)),text:"El cliente la marcó para visitar (prioridad 1)"},{date:ymd(addDays(t,-1)),text:"Visita confirmada"}]}),
+    P({id:"p2",title:"PH 4 ambientes con terraza",barrio:"Belgrano R",address:"Echeverría 3100",amb:4,price:245000,expensas:60000,m2:112,banos:2,cocheras:0,piso:"PB",pisos:2,phone:"+54 11 4782-1190",portal:"Argenprop",url:"https://www.argenprop.com/ph-en-venta-en-belgrano-r-4-ambientes",status:"negociacion",rank:2,
+      offer:{price:232000,deposit:5000,docs:[{name:"Oferta firmada - Echeverría 3100.pdf",size:186000}]},
+      nego:{counter:238000,docs:[{name:"Contraoferta propietario.pdf",size:94000}]},
+      log:[{date:ymd(addDays(t,-10)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-3)),text:"Visita realizada · Me encantó"},{date:ymd(addDays(t,-2)),text:"Oferta enviada: USD 232.000 con USD 5.000 de depósito"},{date:ymd(addDays(t,-1)),text:"Contraoferta del propietario: USD 238.000"}]}),
+    P({id:"p3",title:"Departamento 3 ambientes a estrenar",barrio:"Núñez",address:"Av. del Libertador 7200",amb:3,price:215000,expensas:240000,m2:74,banos:2,cocheras:1,piso:9,pisos:14,phone:"+54 11 3998-2075",portal:"RE/MAX",url:"https://www.remax.com.ar/listings/departamento-3-ambientes-nunez",status:"leida",rank:3,log:[{date:ymd(addDays(t,-4)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-2)),text:"El cliente la marcó para visitar (prioridad 3)"}]}),
+    P({id:"p4",title:"Departamento 2 ambientes luminoso",barrio:"Colegiales",address:"Conesa 900",amb:2,price:139000,expensas:120000,m2:52,banos:1,cocheras:0,piso:3,pisos:6,phone:"+54 11 6011-3321",portal:"Mercado Libre",url:"https://inmuebles.mercadolibre.com.ar/departamento-2-ambientes-colegiales",status:"nueva",log:[{date:ymd(addDays(t,-1)),text:"Aprobada por Broker"}]}),
+    P({id:"p5",title:"Departamento 3 ambientes reciclado",barrio:"Villa Crespo",address:"Thames 400",amb:3,price:168000,expensas:150000,m2:70,banos:1,cocheras:0,piso:2,pisos:5,phone:"+54 11 5590-8812",portal:"Zonaprop",url:"https://www.zonaprop.com.ar/propiedades/departamento-3-ambientes-villa-crespo-thames.html",approval:"pendiente",log:[{date:ymd(t),text:"Cargada por Asistente"}]}),
+    P({id:"p6",title:"Casa 4 ambientes con jardín",barrio:"Coghlan",address:"Washington 3400",amb:4,price:289000,expensas:0,m2:160,banos:3,cocheras:1,piso:"PB",pisos:2,phone:"+54 11 4544-7720",portal:"RE/MAX",url:"https://www.remax.com.ar/listings/casa-4-ambientes-coghlan",approval:"pendiente",log:[{date:ymd(t),text:"Cargada por Asistente"}]}),
+    P({id:"p7",title:"Departamento 4 ambientes con dependencia",barrio:"Caballito",address:"Av. Pedro Goyena 600",amb:4,price:189000,expensas:210000,m2:98,banos:2,cocheras:1,piso:6,pisos:10,phone:"+54 11 4901-6650",portal:"Argenprop",url:"https://www.argenprop.com/departamento-en-venta-en-caballito-4-ambientes",status:"descartada",choiceNote:"Queda lejos del trabajo",log:[{date:ymd(addDays(t,-7)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-6)),text:"Descartada por el cliente: queda lejos del trabajo"}]})
+  ];
+  const visits = [
+    {id:"v1",propId:"p1",date:ymd(addDays(t,1)),time:"18:30",duration:45,address:"Gorriti 4800, Palermo Soho",state:"confirmada",result:null},
+    {id:"v2",propId:"p3",date:ymd(addDays(t,2)),time:"19:00",duration:45,address:"Av. del Libertador 7200, Núñez",state:"propuesta",result:null},
+    {id:"v3",propId:"p2",date:ymd(addDays(t,-3)),time:"18:00",duration:60,address:"Echeverría 3100, Belgrano R",state:"confirmada",result:{rating:"encanto",note:"Muy buena luz y terraza amplia. Revisar humedad en el baño de arriba."}},
+    {id:"v4",propId:"p4",date:ymd(addDays(t,3)),time:"12:00",duration:45,address:"Conesa 900, Colegiales",state:"propuesta",result:null}
+  ];
+  return {
+    session:{role:"broker",name:"Lucía Paz"},
+    currentOp:"op1",
+    ops:[
+      {id:"op1",name:"Compra Javier",created:ymd(addDays(t,-12)),
+        clients:[
+          {id:"c1",name:"Javier",email:"",slots:[{days:[1,2,3,4,5],from:"18:00",to:"20:30"},{days:[6],from:"10:00",to:"13:00"}],notes:"Busca 3 ambientes, cerca de la línea D."},
+          {id:"c2",name:"Carolina",email:"",slots:[{days:[6],from:"10:00",to:"13:00"}],notes:"Solo puede los sábados."}
+        ],
+        props, visits},
+      {id:"op2",name:"Alquiler Sofía",created:ymd(addDays(t,-3)),clients:[{id:"c3",name:"Sofía",email:"",slots:[{days:[2,4],from:"17:00",to:"19:00"}],notes:""}],props:[],visits:[]}
+    ]
+  };
+}
+function load(){ try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e){ return null; } }
+function save(){ if (UI.server === true) { scheduleSync(); return; } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ snack("No se pudo guardar en este navegador. Probá con fotos más livianas."); } }
+
+const emptyState = () => ({session:null, currentOp:null, ops:[]});
+let S = load() || emptyState();
+const UI = { server:null, adminLogin:false, view:"propiedades", propFilter:"todas", weekStart:null, tmpPhotos:[], loginRole:"broker", loginDays:[1,2,3,4,5], visitRating:null, confirmDelete:null };
+
+const op = () => S.ops.find(o => o.id === S.currentOp) || S.ops[0] || null;
+const role = () => S.session ? S.session.role : null;
+const isSuper = () => !!(S.session && S.session.super);
+const canSwitch = () => isSuper() || UI.server === false;
+const isStaff = () => role() === "broker" || role() === "asistente";
+const isBroker = () => role() === "broker";
+const prop = id => op().props.find(p => p.id === id);
+const clientLabel = () => op().clients.map(c=>c.name).join(" y ") || "el cliente";
+function notices(o){ o = o||op(); o.notices = o.notices || []; return o.notices; }
+function unread(){ const r = role(); return notices().filter(n => !(n.seen||[]).includes(r)); }
+function notify(text, extra){ notices().unshift(Object.assign({id:uid("n"), date:nowStamp(), at:new Date().toISOString(), text, seen:[]}, extra||{})); }
+function logp(p, text){ p.log = p.log || []; p.log.push({date:nowStamp(), text}); }
+function ranked(o){ return (o||op()).props.filter(p => p.approval==="aprobada" && p.rank!=null && p.status!=="descartada" && p.status!=="nueva").sort((a,b)=>a.rank-b.rank); }
+function renumber(){ ranked().forEach((p,i)=> p.rank = i+1); }
+function weekMonday(d){ const x = new Date(d); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+function inPrefs(date, time, dur){
+  const d = parseYmd(date).getDay(), s = toMin(time), e = s + (dur||45);
+  return op().clients.some(c => (c.slots||[]).some(sl => sl.days.includes(d) && s >= toMin(sl.from) && e <= toMin(sl.to)));
+}
+function slotText(sl){
+  const ds = [...sl.days].sort((a,b)=>((a+6)%7)-((b+6)%7));
+  let label;
+  const isRange = ds.length>2 && ds.every((d,i)=> i===0 || ((d+6)%7) === ((ds[i-1]+6)%7)+1);
+  label = isRange ? DAYS[ds[0]]+" a "+DAYS[ds[ds.length-1]] : ds.map(d=>DAYS[d]).join(", ");
+  return label+" "+sl.from+"–"+sl.to;
+}
+
+/* ---------- snack ---------- */
+let snackT;
+function snack(msg){ const el = $("#snack"); el.textContent = msg; el.classList.add("show"); clearTimeout(snackT); snackT = setTimeout(()=>el.classList.remove("show"), 3200); }
+
+/* ---------- render: shell ---------- */
+const NAV = [
+  {id:"propiedades",label:"Propiedades",icon:"home_work"},
+  {id:"agenda",label:"Agenda",icon:"calendar_month"},
+  {id:"seguimiento",label:"Seguimiento",icon:"trending_up"},
+  {id:"operacion",label:"Operación",icon:"group"}
+];
+function render(){
+  const root = $("#root");
+  if (UI.server === null && UI.booting){ root.innerHTML = `<div class="login"><div class="login-card" style="align-items:center;text-align:center"><div class="logo"><span class="ms fill">holiday_village</span></div><p>Cargando…</p></div></div>`; return; }
+  if (UI.server === true){
+    if (!S.session){ root.innerHTML = srvLoginHTML(); mountGoogle(); return; }
+    if (S.session.noAccess){ root.innerHTML = noAccessHTML(); return; }
+    syncClientId();
+    if (UI.view === "brokers" && isSuper()){ root.innerHTML = shellHTML(op()); return; }
+  }
+  if (!S.session){ root.innerHTML = loginHTML(); return; }
+  const o = op();
+  if (!o){ root.innerHTML = startHTML(); const f = root.querySelector("[autofocus]"); if (f) f.focus(); return; }
+  root.innerHTML = shellHTML(o);
+}
+function shellHTML(o){
+  const pendingProps = o ? o.props.filter(p=>p.approval==="pendiente").length : 0;
+  const pendingVisits = o ? o.visits.filter(v=>v.state==="propuesta").length : 0;
+  const nUnread = o && isStaff() ? unread().length : 0;
+  const badge = id => {
+    if (!isStaff()) return "";
+    const n = id==="propiedades" ? (isBroker()?pendingProps:0) : id==="agenda" ? (isBroker()?pendingVisits:0) + nUnread : 0;
+    return n ? `<span class="badge-dot num">${n}</span>` : "";
+  };
+  const r = role();
+  const nav = NAV.concat(UI.server===true && isSuper() ? [{id:"brokers",label:"Brokers",icon:"admin_panel_settings"}] : []);
+  const navOk = id => o || id==="brokers";
+  const envChip = UI.server===true && (isSuper() || (UI.me && UI.me.envs.length>1)) ? `<button class="opchip" data-action="env-menu" aria-haspopup="menu"><span class="ms">apartment</span><span class="t">${esc(UI.env ? UI.env.name : "Elegí un ambiente")}</span><span class="ms">expand_more</span></button>` : "";
+  return `
+  <div class="app">
+    <nav class="rail" aria-label="Secciones">
+      <div class="logo" aria-hidden="true"><span class="ms fill">holiday_village</span></div>
+      ${nav.filter(n=>navOk(n.id)).map(n=>`<button class="navbtn" data-action="nav" data-view="${n.id}" ${UI.view===n.id?'aria-current="page"':''}><span class="pill"><span class="ms">${n.icon}</span>${badge(n.id)}</span>${n.label}</button>`).join("")}
+    </nav>
+    <main class="main">
+      <div class="topbar">
+        <div class="brand"><div class="logo"><span class="ms fill">holiday_village</span></div></div>
+        ${envChip}
+        ${o ? `<button class="opchip" data-action="op-menu" aria-haspopup="menu"><span class="ms">folder_open</span><span class="t">${esc(o.name)}</span><span class="ms">expand_more</span></button>` : ""}
+        <div class="spacer"></div>
+        ${UI.server===true ? `<span id="sync" class="sync" aria-live="polite">${syncLabel()}</span>` : ""}
+        ${isStaff()?`<button class="icon-btn bell" data-action="notif-menu" aria-haspopup="menu" aria-label="Avisos${nUnread?": "+nUnread+" sin leer":""}"><span class="ms ${nUnread?"fill":""}">notifications</span>${nUnread?`<span class="badge-dot num">${nUnread}</span>`:""}</button>`:""}
+        <button class="account" data-action="account-menu" aria-haspopup="menu">
+          <span class="who"><small>${isSuper()?"Admin · como "+ROLES[r].label:ROLES[r].label}</small><b>${esc(isSuper()?(S.session.superName||S.session.name):S.session.name)}</b></span>
+          <span class="avatar av-${r} ${isSuper()?"av-super":""}">${isSuper()?'<span class="ms fill" style="font-size:18px">shield_person</span>':esc(initials(S.session.name))}</span>
+        </button>
+      </div>
+      <div id="view">${o && UI.view!=="brokers" ? viewHTML() : brokersHTML()}</div>
+    </main>
+  </div>
+  ${o && UI.view!=="brokers" ? fabHTML() : ""}`;
+}
+function viewHTML(){
+  switch(UI.view){
+    case "agenda": return agendaHTML();
+    case "seguimiento": return pipelineHTML();
+    case "operacion": return opHTML();
+    default: return propsHTML();
+  }
+}
+function fabHTML(){
+  if (!isStaff()) return "";
+  if (UI.view==="propiedades") return `<button class="fab" data-action="add-prop"><span class="ms">add_link</span>Agregar propiedad</button>`;
+  if (UI.view==="agenda") return `<button class="fab" data-action="add-visit"><span class="ms">edit_calendar</span>Nueva visita</button>`;
+  return "";
+}
+
+/* ---------- first run ---------- */
+function startHTML(){
+  const staff = isStaff();
+  return `<div class="login"><form class="login-card" data-form="first-op">
+    <div class="logo"><span class="ms fill">holiday_village</span></div>
+    ${staff ? `<div><h1 style="font-size:28px">Creá tu primera operación</h1><p style="margin-top:6px">Una operación agrupa a los clientes de una búsqueda, sus propiedades y su agenda. Después vas a poder compartir el link con ellos.</p></div>
+      <div class="field"><label for="fo-name">Nombre de la operación</label><input id="fo-name" required autofocus placeholder="Ej.: Compra Javier"></div>
+      <div class="field"><label for="fo-client">Primer cliente (opcional)</label><input id="fo-client" placeholder="Ej.: Javier"><span class="help">Podés sumar más clientes y sus horarios desde Operación.</span></div>
+      <button class="btn btn-filled" type="submit" style="height:48px"><span class="ms">add</span>Crear operación</button>`
+    : `<div><h1 style="font-size:28px">Todavía no hay operaciones</h1><p style="margin-top:6px">Pedile a tu broker el link de tu búsqueda para empezar.</p></div>`}
+    ${isSuper() && UI.server===true ? `<button class="btn btn-outline" type="button" data-action="nav" data-view="brokers" style="align-self:center"><span class="ms">admin_panel_settings</span>Volver al panel de brokers</button>` : ""}
+    <button class="btn btn-text" type="button" data-action="logout" style="align-self:center">Ingresar con otro usuario</button>
+  </form></div>`;
+}
+
+/* ---------- login ---------- */
+function loginHTML(){
+  if (UI.adminLogin) return `<div class="login"><form class="login-card" data-form="admin-login">
+    <div class="logo" style="background:var(--ink);color:#fff"><span class="ms fill">shield_person</span></div>
+    <div><h1 style="font-size:28px">Ingreso de superusuario</h1><p style="margin-top:6px">Accedés con permisos completos y podés cambiar entre Broker, Asistente y Cliente.</p></div>
+    <div class="field"><label for="ad-pass">Contraseña de administrador</label><input id="ad-pass" type="password" required autofocus autocomplete="current-password"></div>
+    <div id="ad-msg" class="found" style="color:var(--red)"></div>
+    <button class="btn btn-filled" type="submit" style="height:48px"><span class="ms">login</span>Ingresar</button>
+    <button class="btn btn-text" type="button" data-action="admin-cancel" style="align-self:center">Volver</button>
+  </form></div>`;
+  const r = UI.loginRole;
+  return `<div class="login"><form class="login-card" data-form="login">
+    <div class="logo"><span class="ms fill">holiday_village</span></div>
+    <div><h1 style="font-size:30px">Visitas Inmobiliarias</h1><p style="margin-top:6px">Coordiná propiedades, visitas y ofertas entre broker, asistente y clientes.</p></div>
+    <div class="role-pick" role="group" aria-label="Tipo de usuario">
+      ${Object.entries(ROLES).map(([k,v])=>`<button type="button" data-action="login-role" data-role="${k}" aria-pressed="${r===k}"><span class="ms">${v.icon}</span>${v.label}</button>`).join("")}
+    </div>
+    <p style="font-size:13px">${ROLES[r].desc}.</p>
+    ${r==="cliente" ? `
+      <div class="field"><label for="lg-name">Nombre</label><input id="lg-name" required value="Javier" autocomplete="given-name"></div>
+      <div class="field"><label>¿Qué días podés visitar?</label>
+        <div class="daypick">${[1,2,3,4,5,6,0].map(d=>`<button type="button" data-action="login-day" data-day="${d}" aria-pressed="${UI.loginDays.includes(d)}">${DAYS[d]}</button>`).join("")}</div></div>
+      <div class="form"><div class="field h"><label for="lg-from">Desde</label><input id="lg-from" type="time" value="18:00"></div><div class="field h"><label for="lg-to">Hasta</label><input id="lg-to" type="time" value="20:30"></div></div>
+      ${S.ops.length ? `<div class="field"><label for="lg-op">Operación (del link que te compartieron)</label><select id="lg-op">${S.ops.map(o=>`<option value="${o.id}" ${o.id===S.currentOp?"selected":""}>${esc(o.name)}</option>`).join("")}</select></div>` : `<div class="note"><span class="ms">info</span>Todavía no hay operaciones creadas. Para probar, entrá primero como Broker o Asistente y creá una.</div>`}
+    ` : `<div class="field"><label for="lg-name">Nombre</label><input id="lg-name" required value="${r==="broker"?"Lucía Paz":"Tomás Gil"}"></div>`}
+    <button class="gbtn" type="submit"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.3 5.7c4.3-3.9 7-9.8 7-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.7c-2 1.4-4.7 2.3-8.6 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continuar con Google</button>
+    <p style="font-size:12px;color:var(--ink-3)">En esta versión de prueba el ingreso es simulado. Al publicarla, la cuenta de Google permitirá guardar las visitas en tu calendario.</p>
+  </form></div>`;
+}
+
+/* ---------- properties ---------- */
+function propCard(p, opts={}){
+  const staff = isStaff();
+  const nPhotos = (p.photos||[]).length;
+  let actions = "";
+  if (!staff){
+    if (p.status==="nueva") actions = `<button class="btn btn-tonal btn-sm" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text btn-sm" data-action="discard" data-id="${p.id}">Descartar</button>`;
+    else if (p.status==="descartada") actions = `<button class="btn btn-text btn-sm" data-action="restore" data-id="${p.id}"><span class="ms">undo</span>Volver a considerar</button>`;
+  } else if (isBroker() && p.approval==="pendiente"){
+    actions = `<button class="btn btn-filled btn-sm" data-action="approve" data-id="${p.id}"><span class="ms">check</span>Aprobar</button><button class="btn btn-text btn-sm" data-action="reject" data-id="${p.id}">Rechazar</button>`;
+  }
+  if (staff){
+    actions += `<div class="card-tools">
+      <div class="left">${p.phone
+        ? `<a class="icon-btn wa" href="${waUrl(p)}" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp" title="Contactar por WhatsApp a ${esc(p.phone)}"><span class="ms fill">chat</span></a>`
+        : `<button class="icon-btn wa" data-action="no-phone" data-id="${p.id}" aria-label="Contactar por WhatsApp" title="Falta el teléfono del anunciante"><span class="ms">chat</span></button>`}
+        <button class="icon-btn cal" data-action="card-visit" data-id="${p.id}" aria-label="Agendar visita" title="Agendar visita"><span class="ms">calendar_add_on</span></button>
+        ${isBroker() ? (p.approval==="aprobada"
+          ? `<button class="icon-btn ok is-on" data-action="unapprove" data-id="${p.id}" aria-pressed="true" aria-label="Aprobada. Tocá para desaprobar" title="Aprobada: el cliente la ve. Tocá para desaprobar"><span class="ms fill">verified</span></button>`
+          : `<button class="icon-btn ok" data-action="approve" data-id="${p.id}" aria-pressed="false" aria-label="Aprobar para el cliente" title="${p.approval==="rechazada"?"No aprobada: el cliente no la ve. Tocá para aprobar":"Aprobar para el cliente"}"><span class="ms">verified</span></button>`) : ""}</div>
+      <button class="icon-btn del-card" data-action="card-del" data-id="${p.id}" aria-label="Eliminar de la lista" title="Eliminar de la lista"><span class="ms">delete</span></button>
+    </div>`;
+  }
+  const appr = staff && p.approval!=="aprobada" ? `<span class="status s-${p.approval}">${p.approval==="pendiente"?"Por aprobar":"No aprobada"}</span>` : "";
+  const st = p.approval==="aprobada" ? `<span class="status s-${p.status}">${STATUS[p.status].label}</span>` : "";
+  return `<article class="pcard ${opts.dim?'dim':''}" data-action="open" data-id="${p.id}" tabindex="0" aria-label="${esc(p.title)}">
+    <div class="pimg"><img src="${cover(p)}" alt="">
+      <div class="tl">${appr}${st}</div>
+      ${p.rank && p.status!=="descartada" && p.status!=="nueva" ? `<span class="rankbadge" title="Prioridad del cliente">#${p.rank}</span>`:""}
+      ${p.portal?`<span class="portal">${esc(p.portal)}</span>`:""}
+      ${nPhotos>1?`<span class="photo-count"><span class="ms">photo_library</span>${nPhotos}</span>`:""}
+    </div>
+    <div class="pbody">
+      <div class="price">${usd(p.price)}</div>
+      <div class="exp">${p.expensas? "+ "+ars(p.expensas)+" expensas" : "Sin expensas"}</div>
+      <h3>${esc(p.title)}</h3>
+      <div class="loc"><span class="ms">location_on</span>${esc(p.barrio||"")}${p.address?" · "+esc(p.address):""}</div>
+      <div class="specs">
+        <span><span class="ms">meeting_room</span>${fmtNum(p.amb)} amb</span>
+        <span><span class="ms">square_foot</span>${fmtNum(p.m2)} m²</span>
+        <span><span class="ms">bathtub</span>${fmtNum(p.banos)}</span>
+        <span><span class="ms">garage</span>${fmtNum(p.cocheras)}</span>
+        <span><span class="ms">stairs</span>${esc(p.piso??"—")}/${esc(p.pisos??"—")}</span>
+      </div>
+      ${p.status==="descartada" && p.choiceNote ? `<div class="result" style="margin-top:6px">Motivo: ${esc(p.choiceNote)}</div>` : ""}
+      ${actions?`<div class="pactions">${actions}</div>`:""}
+    </div>
+  </article>`;
+}
+function rankListHTML(editable){
+  const list = ranked();
+  if (!list.length) return `<div class="empty"><span class="ms">format_list_numbered</span>Todavía no hay propiedades priorizadas.</div>`;
+  return `<ol class="rank-list">${list.map((p,i)=>`
+    <li class="rank-item">
+      <span class="no">${p.rank}</span>
+      <img src="${cover(p)}" alt="">
+      <button class="t" data-action="open" data-id="${p.id}" style="border:0;background:none;text-align:left;cursor:pointer;padding:0"><b>${esc(p.title)}</b><small>${esc(p.barrio)} · ${usd(p.price)}</small><br><span class="status s-${p.status}" style="margin-top:4px">${STATUS[p.status].label}</span></button>
+      ${editable?`<span class="mv"><button class="icon-btn" data-action="rank-up" data-id="${p.id}" ${i===0?"disabled":""} aria-label="Subir prioridad"><span class="ms">arrow_upward</span></button><button class="icon-btn" data-action="rank-down" data-id="${p.id}" ${i===list.length-1?"disabled":""} aria-label="Bajar prioridad"><span class="ms">arrow_downward</span></button></span>`:"<span></span>"}
+    </li>`).join("")}</ol>`;
+}
+function propsHTML(){
+  const o = op();
+  if (!isStaff()){
+    const visible = o.props.filter(p=>p.approval==="aprobada");
+    const fresh = visible.filter(p=>p.status==="nueva");
+    const disc = visible.filter(p=>p.status==="descartada");
+    const conf = o.visits.filter(v=>v.state==="confirmada" && parseYmd(v.date)>=today()).length;
+    if (!UI.clientTab) UI.clientTab = "todas";
+    const tab = UI.clientTab;
+    return `
+    <div class="page-head"><div><h1>Hola, ${esc(S.session.name)}</h1><div class="sub">Revisá las propiedades que seleccionó tu broker y ordenalas según tu preferencia.</div></div></div>
+    <div class="summary">
+      <button class="stat click ${fresh.length?'alert':''}" data-action="ctab" data-k="revisar"><b>${fresh.length}</b><span>Para revisar</span></button>
+      <button class="stat click" data-action="ctab" data-k="elegidas"><b>${ranked().length}</b><span>En tu ranking</span></button>
+      <button class="stat click" data-action="nav" data-view="agenda"><b>${conf}</b><span>Visitas confirmadas</span></button>
+      <button class="stat click" data-action="ctab" data-k="descartadas"><b>${disc.length}</b><span>Descartadas</span></button>
+    </div>
+    <div class="props-layout">
+      <div>
+        <div class="chips" role="tablist" aria-label="Mis propiedades" style="margin-bottom:16px">
+          ${[["todas","Todas",fresh.length+ranked().length],["revisar","Para revisar",fresh.length],["elegidas","Elegidas para visitar",ranked().length],["descartadas","Descartadas",disc.length]].map(([k,l,n])=>`<button class="fchip" role="tab" data-action="ctab" data-k="${k}" aria-pressed="${tab===k}" aria-selected="${tab===k}">${tab===k?'<span class="ms" style="font-size:18px">check</span>':""}${l} <span class="n">${n}</span></button>`).join("")}
+        </div>
+        ${tab==="todas" ? (fresh.length+ranked().length ? `
+          ${fresh.length?`<div class="section-title" style="margin-top:0"><h2>Para revisar</h2><span class="count num">${fresh.length}</span></div><div class="grid">${fresh.map(p=>propCard(p)).join("")}</div>`:""}
+          ${ranked().length?`<div class="section-title" ${fresh.length?"":'style="margin-top:0"'}><h2>Elegidas para visitar</h2><span class="count num">${ranked().length}</span></div><div class="grid">${ranked().map(p=>propCard(p)).join("")}</div>`:""}
+          ${disc.length?`<p class="hint" style="color:var(--ink-3);margin-top:18px">Tenés ${disc.length} ${disc.length===1?"propiedad descartada":"propiedades descartadas"} en la pestaña Descartadas.</p>`:""}` : `<div class="empty"><span class="ms">hourglass_empty</span>Tu broker todavía no te compartió propiedades.</div>`) : ""}
+        ${tab==="revisar" ? (fresh.length ? `<div class="grid">${fresh.map(p=>propCard(p)).join("")}</div>` : `<div class="empty"><span class="ms">done_all</span>Ya revisaste todas. Tu broker te va a avisar cuando sume nuevas.</div>`) : ""}
+        ${tab==="elegidas" ? (ranked().length ? `<div class="grid">${ranked().map(p=>propCard(p)).join("")}</div>` : `<div class="empty"><span class="ms">bookmark_add</span>Tocá “Quiero verla” en las que te interesen.</div>`) : ""}
+        ${tab==="descartadas" ? (disc.length ? `<p class="hint" style="color:var(--ink-2);margin:0 0 14px">Las propiedades que descartaste quedan acá. Si cambiás de idea, tocá “Volver a considerar”.</p><div class="grid">${disc.map(p=>propCard(p,{dim:true})).join("")}</div>` : `<div class="empty"><span class="ms">delete_sweep</span>No descartaste ninguna propiedad.</div>`) : ""}
+      </div>
+      <aside class="panel"><h2>Mi orden de preferencia</h2><p class="hint">Subí o bajá cada propiedad. Tu broker y su asistente ven este orden para armar las visitas.</p>${rankListHTML(true)}</aside>
+    </div>`;
+  }
+  const counts = {todas:o.props.length, pendiente:o.props.filter(p=>p.approval==="pendiente").length, aprobada:o.props.filter(p=>p.approval==="aprobada"&&p.status!=="descartada").length, rechazada:o.props.filter(p=>p.approval==="rechazada").length, descartada:o.props.filter(p=>p.approval==="aprobada"&&p.status==="descartada").length};
+  const f = UI.propFilter;
+  let list = o.props.filter(p => f==="todas" || (f==="descartada" ? p.approval==="aprobada" && p.status==="descartada" : f==="aprobada" ? p.approval==="aprobada" && p.status!=="descartada" : p.approval===f));
+  list.sort((a,b)=>{
+    const w = p => p.approval==="pendiente"?0:p.approval==="rechazada"?3:p.status==="descartada"?2:1;
+    return w(a)-w(b) || (a.rank??99)-(b.rank??99);
+  });
+  const offers = o.props.filter(p=>["oferta","negociacion","reservada"].includes(p.status)).length;
+  const conf = o.visits.filter(v=>v.state==="confirmada" && parseYmd(v.date)>=today()).length;
+  return `
+  <div class="page-head"><div><h1>Propiedades</h1><div class="sub">${esc(o.name)} · ${o.clients.length ? `${o.clients.length} ${o.clients.length===1?"cliente":"clientes"}: ${esc(clientLabel())}` : "Todavía sin clientes. Sumalos desde Operación."}</div></div></div>
+  <div class="summary">
+    <div class="stat ${counts.pendiente?'alert':''}"><b>${counts.pendiente}</b><span>${isBroker()?"Esperan tu aprobación":"Esperan aprobación del broker"}</span></div>
+    <div class="stat"><b>${o.props.filter(p=>p.approval==="aprobada"&&p.status==="nueva").length}</b><span>Sin revisar por el cliente</span></div>
+    <div class="stat"><b>${conf}</b><span>Visitas confirmadas</span></div>
+    <div class="stat"><b>${offers}</b><span>En oferta o reserva</span></div>
+  </div>
+  <div class="props-layout">
+    <div>
+      <div class="chips" role="group" aria-label="Filtrar" style="margin-bottom:16px">
+        ${[["todas","Todas"],["pendiente","Por aprobar"],["aprobada","Aprobadas"],["rechazada","No aprobadas"],["descartada","Descartadas por el cliente"]].map(([k,l])=>`<button class="fchip" data-action="pfilter" data-f="${k}" aria-pressed="${f===k}">${f===k?'<span class="ms" style="font-size:18px">check</span>':""}${l} <span class="n">${counts[k]}</span></button>`).join("")}
+      </div>
+      ${list.length?`<div class="grid">${list.map(p=>propCard(p,{dim:p.status==="descartada"||p.approval==="rechazada"})).join("")}</div>`:`<div class="empty"><span class="ms">add_home</span>No hay propiedades en este filtro. Pegá el link de un aviso para sumar la primera.</div>`}
+    </div>
+    <aside class="panel"><h2>Prioridades ${o.clients.length?"de "+esc(clientLabel()):"del cliente"}</h2><p class="hint">Orden que definió el cliente. Usalo para decidir qué visitas coordinar primero.</p>${rankListHTML(false)}</aside>
+  </div>`;
+}
+
+/* ---------- agenda ---------- */
+const H0 = 8, H1 = 21, ROWH = 52;
+function agendaHTML(){
+  const o = op();
+  if (!UI.weekStart) UI.weekStart = ymd(weekMonday(today()));
+  const ws = parseYmd(UI.weekStart);
+  const days = [...Array(7)].map((_,i)=>addDays(ws,i));
+  const tStr = ymd(today());
+  const staff = isStaff();
+  const vis = o.visits.filter(v => v.state!=="rechazada" && (staff || v.state==="confirmada"));
+  const slots = o.clients.flatMap(c=>c.slots||[]);
+  const now = new Date();
+  const endW = addDays(ws,6);
+  const title = ws.getMonth()===endW.getMonth() ? `${ws.getDate()} al ${endW.getDate()} de ${MONTHS[ws.getMonth()]}` : `${ws.getDate()} ${MONTHS[ws.getMonth()]} al ${endW.getDate()} ${MONTHS[endW.getMonth()]}`;
+  const dayCol = d => {
+    const ds = ymd(d), wd = d.getDay();
+    const bands = slots.filter(s=>s.days.includes(wd)).map(s=>{
+      const a = Math.max(toMin(s.from), H0*60), b = Math.min(toMin(s.to), H1*60);
+      if (b<=a) return "";
+      return `<div class="pref-band" style="top:${(a-H0*60)/60*ROWH}px;height:${(b-a)/60*ROWH}px" title="Disponibilidad del cliente ${s.from}–${s.to}"></div>`;
+    }).join("");
+    const evs = vis.filter(v=>v.date===ds).map(v=>{
+      const p = prop(v.propId); if (!p) return "";
+      const s = toMin(v.time), dur = v.duration||45;
+      const past = parseYmd(v.date) < today();
+      const cls = past ? "done" : v.state;
+      return `<button class="ev ${cls}" style="top:${(s-H0*60)/60*ROWH+1}px;height:${Math.max(dur/60*ROWH-2,30)}px" data-action="open-visit" data-id="${v.id}"><b>${esc(p.title)}</b><small>${v.time} · ${esc(p.barrio)}</small></button>`;
+    }).join("");
+    let nowLine = "";
+    if (ds===tStr){ const m = now.getHours()*60+now.getMinutes(); if (m>=H0*60 && m<=H1*60) nowLine = `<div class="now-line" style="top:${(m-H0*60)/60*ROWH}px"></div>`; }
+    return `<div class="wk-day ${ds===tStr?'today':''}" style="height:${(H1-H0)*ROWH}px">${bands}${evs}${nowLine}</div>`;
+  };
+  const sorted = [...o.visits].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const upcoming = sorted.filter(v=>parseYmd(v.date)>=today());
+  const pending = upcoming.filter(v=>v.state==="propuesta");
+  const confirmed = upcoming.filter(v=>v.state==="confirmada");
+  const done = sorted.filter(v=>parseYmd(v.date)<today() && v.state==="confirmada").reverse();
+  const rejected = upcoming.filter(v=>v.state==="rechazada" && v.rejectedBy!=="cliente");
+  const rejectedClient = upcoming.filter(v=>v.state==="rechazada" && v.rejectedBy==="cliente");
+  const newNotices = staff ? unread() : [];
+  const col = (t, icon, arr, emptyTxt) => `<section><div class="col-title"><span class="ms">${icon}</span><h2>${t}</h2><span class="count num">${arr.length}</span></div>${arr.length?`<div class="stack">${arr.map(visitCard).join("")}</div>`:`<div class="empty" style="padding:20px">${emptyTxt}</div>`}</section>`;
+  return `
+  <div class="page-head"><div><h1>Agenda de visitas</h1><div class="sub">${staff?"Proponé horarios dentro de la disponibilidad del cliente. El broker confirma si puede acompañar.":"Estas son tus visitas confirmadas. Agregalas a tu Google Calendar con un toque."}</div></div></div>
+  ${newNotices.map(n=>`<div class="notice" role="alert"><span class="ms fill">event_busy</span><div class="txt"><b>${esc(n.text)}</b>${n.reason?`<small>Motivo: ${esc(n.reason)}</small>`:""}<small>${fmtDateShort(n.date)}</small></div><div class="acts">${n.visitId && op().visits.some(v=>v.id===n.visitId && v.state==="rechazada")?`<button class="btn btn-filled btn-sm" data-action="edit-visit" data-id="${n.visitId}" data-notice="${n.id}"><span class="ms">edit_calendar</span>Reprogramar</button>`:""}<button class="btn btn-text btn-sm" data-action="notice-read" data-id="${n.id}">Entendido</button></div></div>`).join("")}
+  <div class="pref-banner"><span class="ms">schedule</span>${o.clients.map(c=>`<b>${esc(c.name)}</b> ${(c.slots||[]).map(s=>`<span class="slot">${esc(slotText(s))}</span>`).join(" ")||'<span class="slot">Sin horarios cargados</span>'}`).join(" &nbsp; ")}
+    ${!staff?`<button class="btn btn-text btn-sm" data-action="edit-prefs" style="margin-left:auto">Cambiar mis horarios</button>`:""}</div>
+  <div class="weeknav">
+    <button class="icon-btn" data-action="week" data-d="-7" aria-label="Semana anterior"><span class="ms">chevron_left</span></button>
+    <button class="icon-btn" data-action="week" data-d="7" aria-label="Semana siguiente"><span class="ms">chevron_right</span></button>
+    <button class="btn btn-outline btn-sm" data-action="week" data-d="0">Hoy</button>
+    <h2>${title}</h2>
+    <div class="legend"><span><i style="background:var(--primary)"></i>Confirmada</span>${staff?`<span><i style="background:#FFF6E8;border:1.5px dashed #D99A3A"></i>Propuesta, espera al broker</span>`:""}<span><i style="background:rgba(61,220,132,.25);border-left:3px solid var(--android)"></i>Disponibilidad del cliente</span></div>
+  </div>
+  <div class="week-scroll"><div class="week" style="--rowh:${ROWH}px">
+    <div class="wk-head"><div></div>${days.map(d=>`<div class="${ymd(d)===tStr?'today':''}">${DAYS[d.getDay()]}<b>${d.getDate()}</b></div>`).join("")}</div>
+    <div class="wk-body">
+      <div class="wk-times" style="height:${(H1-H0)*ROWH}px">${[...Array(H1-H0)].map((_,i)=> i===0?"":`<span style="top:${i*ROWH}px">${pad(H0+i)}:00</span>`).join("")}</div>
+      ${days.map(dayCol).join("")}
+    </div>
+  </div></div>
+  <div class="visit-cols">
+    ${staff ? col(isBroker()?"Esperan tu confirmación":"Esperan confirmación del broker","pending_actions",pending,"No hay visitas propuestas.") : ""}
+    ${col("Próximas confirmadas","event_available",confirmed, staff?"Todavía no hay visitas confirmadas.":"Tu broker te va a avisar cuando confirme una visita.")}
+    ${col("Realizadas","history",done,"Cuando hagas una visita vas a poder registrar qué te pareció.")}
+    ${staff && rejectedClient.length ? col("El cliente no puede ir","person_cancel",rejectedClient,"") : ""}
+    ${staff && rejected.length ? col("Rechazadas por el broker","event_busy",rejected,"") : ""}
+  </div>`;
+}
+function visitCard(v){
+  const p = prop(v.propId); if (!p) return "";
+  const d = parseYmd(v.date);
+  const past = d < today();
+  const staff = isStaff();
+  const out = !inPrefs(v.date, v.time, v.duration);
+  let actions = "";
+  if (v.state==="propuesta" && isBroker()) actions += `<button class="btn btn-filled btn-sm" data-action="confirm-visit" data-id="${v.id}"><span class="ms">check</span>Confirmar</button><button class="btn btn-text btn-sm" data-action="reject-visit" data-id="${v.id}">No puedo</button>`;
+  if (v.state==="confirmada" && !past) actions += `<a class="btn btn-tonal btn-sm" href="${gcalUrl(v,p)}" target="_blank" rel="noopener"><span class="ms">event</span>Google Calendar</a>`;
+  if (v.state==="confirmada" && !past && !staff) actions += `<button class="btn btn-text btn-sm" data-action="client-reject" data-id="${v.id}" style="color:var(--red)"><span class="ms">event_busy</span>No puedo ir</button>`;
+  if (past && v.state==="confirmada") actions += `<button class="btn ${v.result?'btn-text':'btn-tonal'} btn-sm" data-action="result" data-id="${v.id}"><span class="ms">rate_review</span>${v.result?"Editar resultado":"Registrar resultado"}</button>`;
+  if (staff && !past && v.state==="rechazada") actions += `<button class="btn btn-tonal btn-sm" data-action="edit-visit" data-id="${v.id}"><span class="ms">edit_calendar</span>Reprogramar</button>`;
+  else if (staff && !past) actions += `<button class="icon-btn" data-action="edit-visit" data-id="${v.id}" aria-label="Editar visita"><span class="ms">edit</span></button>`;
+  return `<article class="vcard">
+    <div class="vdate"><small>${DAYS[d.getDay()]}</small><b>${d.getDate()}</b><span>${v.time}</span></div>
+    <div class="vt">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="status s-${v.state==="rechazada"&&v.rejectedBy==="cliente"?"rechazada_cliente":v.state}">${v.state==="propuesta"?"Propuesta":v.state==="confirmada"?(past?"Realizada":"Confirmada"):v.rejectedBy==="cliente"?"El cliente no puede":"Rechazada"}</span><small class="num" style="color:var(--ink-3)">${v.duration||45} min</small></div>
+      <h3><button data-action="open" data-id="${p.id}" style="all:unset;cursor:pointer">${esc(p.title)}</button></h3>
+      <a class="addr" href="${mapsUrl(v.address)}" target="_blank" rel="noopener" style="color:var(--ink-2)">${esc(v.address)}</a>
+      ${staff && out && v.state!=="rechazada" && !past ? `<div class="warn"><span class="ms">warning</span>Fuera de los horarios que indicó el cliente</div>`:""}
+      ${v.state==="rechazada"&&v.rejectedBy==="cliente"&&staff?`<div class="result"><b>${esc(v.rejectedName||"El cliente")}</b>${v.clientReason?": "+esc(v.clientReason):" no indicó motivo"}</div>`:""}
+      ${v.result?`<div class="result"><b>${RATING[v.result.rating]?.label||""}</b>${v.result.note?" · "+esc(v.result.note):""}</div>`:""}
+      ${actions?`<div class="row">${actions}</div>`:""}
+    </div>
+  </article>`;
+}
+
+/* ---------- pipeline ---------- */
+function pipelineHTML(){
+  const o = op();
+  const staff = isStaff();
+  const cols = [];
+  if (staff) cols.push({k:"pendiente",label:"Por aprobar",items:o.props.filter(p=>p.approval==="pendiente")});
+  STATUS_KEYS.forEach(k=> cols.push({k, label:STATUS[k].label, items:o.props.filter(p=>p.approval==="aprobada" && p.status===k).sort((a,b)=>(a.rank??99)-(b.rank??99))}));
+  const card = p => {
+    let extra = "";
+    if (p.status==="oferta" || p.status==="negociacion") extra += `<dl class="kv"><dt>Ofrecido</dt><dd>${usd(p.offer.price)}</dd><dt>Depósito</dt><dd>${usd(p.offer.deposit)}</dd>${p.status==="negociacion"?`<dt>Contraoferta</dt><dd>${usd(p.nego.counter)}</dd>`:""}</dl>`;
+    if (p.status==="reservada") extra += `<dl class="kv"><dt>Escritura</dt><dd>${p.reserve.deedDate?fmtDateShort(p.reserve.deedDate):"—"}</dd><dt>Avance</dt><dd>${p.reserve.progress||0}%</dd></dl><div class="progress"><i style="width:${p.reserve.progress||0}%"></i></div>`;
+    if (p.status==="descartada" && p.choiceNote) extra += `<small>${esc(p.choiceNote)}</small>`;
+    const docs = (p.offer.docs.length + p.nego.docs.length);
+    return `<button class="bcard" data-action="open" data-id="${p.id}"><div class="top"><img src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.barrio)} · ${usd(p.price)}</small></div></div>${p.rank&&!["nueva","descartada"].includes(p.status)?`<small>Prioridad #${p.rank}</small>`:""}${extra}${docs?`<small><span class="ms" style="font-size:14px;vertical-align:-2px">attach_file</span> ${docs} ${docs===1?"documento":"documentos"}</small>`:""}</button>`;
+  };
+  return `
+  <div class="page-head"><div><h1>Seguimiento</h1><div class="sub">Cada propiedad avanza de Nueva a Reservada. ${staff?"Abrí una tarjeta para cargar ofertas, contraofertas, documentos y novedades.":"Acá ves en qué etapa está cada propiedad."}</div></div></div>
+  <div class="board-scroll"><div class="board">
+    ${cols.map(c=>`<section class="bcol"><header><span class="status s-${c.k}">${c.label}</span><span class="n">${c.items.length}</span></header>${c.items.map(card).join("")||`<small style="color:var(--ink-3);padding:4px">Sin propiedades</small>`}</section>`).join("")}
+  </div></div>`;
+}
+
+/* ---------- operation ---------- */
+function shareLink(o){ const hosted = /^https?:$/.test(location.protocol) && !/claude\.(ai|site)|claudeusercontent|anthropic/.test(location.hostname); return (hosted ? location.origin : "https://tu-app.netlify.app") + "/?op=" + o.id; }
+function opHTML(){
+  const o = op();
+  const staff = isStaff();
+  return `
+  <div class="page-head"><div><h1>${esc(o.name)}</h1><div class="sub">${UI.server===true && UI.env ? esc(UI.env.name)+" · " : ""}Operación creada el ${fmtDateLong(o.created)}</div></div>
+    ${staff?`<div class="actions"><button class="btn btn-outline" data-action="rename-op"><span class="ms">edit</span>Renombrar</button><button class="btn btn-filled" data-action="new-op"><span class="ms">add</span>Nueva operación</button></div>`:""}</div>
+  <div class="op-grid">
+    ${UI.server===true ? srvOpPanelsHTML(o) : staff?`<section class="panel"><h2>Link para clientes</h2><p class="hint">Compartilo con todos los compradores de esta operación. Entran con su cuenta de Google y tienen los mismos permisos.</p>
+      <div class="linkbox"><code>${esc(shareLink(o))}</code><button class="btn btn-tonal btn-sm" data-action="copy-link"><span class="ms">content_copy</span>Copiar</button></div>
+      <small style="color:var(--ink-3)">El dominio final lo definís al publicar en Netlify.</small></section>`:""}
+    <section class="panel"><h2>Clientes y disponibilidad</h2><p class="hint">Horarios en los que cada cliente puede visitar propiedades.</p>
+      ${o.clients.map(c=>`<div class="client-row"><span class="avatar av-cliente">${esc(initials(c.name))}</span><div class="info"><b>${esc(c.name)}</b>${(c.slots||[]).map(s=>`<small class="num">${esc(slotText(s))}</small>`).join("")}${c.notes?`<small style="margin-top:4px;color:var(--ink-2)">${esc(c.notes)}</small>`:""}</div>${(staff || (S.session.clientId===c.id) || (!staff && S.session.name===c.name))?`<button class="icon-btn" data-action="edit-client" data-id="${c.id}" aria-label="Editar ${esc(c.name)}"><span class="ms">edit</span></button>`:""}</div>`).join("")}
+      ${staff?`<button class="btn btn-text" data-action="add-client" style="margin-top:8px"><span class="ms">person_add</span>${UI.server===true?"Agregar cliente sin cuenta":"Agregar cliente"}</button>`:""}
+    </section>
+    ${staff?`<section class="panel"><h2>Operaciones</h2><p class="hint">Cambiá de operación para ver sus propiedades y agenda.</p>
+      <ul class="oplist">${S.ops.map(x=>`<li><button data-action="switch-op" data-id="${x.id}" aria-current="${x.id===o.id}"><span class="ms">folder</span><span class="t">${esc(x.name)}</span><small>${x.props.length} prop · ${x.visits.length} visitas</small></button></li>`).join("")}</ul></section>`:""}
+    ${staff?`<section class="panel"><h2>Permisos por usuario</h2><p class="hint">Qué puede hacer cada rol en esta operación.</p>
+      <div class="stack" style="gap:10px;font-size:14px">
+        <div><b>Asistente</b><br><span style="color:var(--ink-2)">Carga propiedades desde los portales, propone visitas, sube ofertas y documentos. Ve el teléfono del anunciante.</span></div>
+        <div><b>Broker</b><br><span style="color:var(--ink-2)">Todo lo del asistente, más aprobar propiedades y confirmar visitas. Solo lo aprobado lo ve el cliente.</span></div>
+        <div><b>Cliente</b><br><span style="color:var(--ink-2)">Ve lo aprobado, elige qué visitar, ordena por preferencia y agenda en Google Calendar.</span></div>
+      </div></section>`:""}
+    ${UI.server===true ? "" : `<section class="panel"><h2>Datos de prueba</h2><p class="hint">Esta versión guarda todo en este navegador.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-outline" data-action="reset"><span class="ms">restart_alt</span>Empezar de cero</button><button class="btn btn-text" data-action="load-demo"><span class="ms">dataset</span>Cargar datos de ejemplo</button></div></section>`}
+  </div>`;
+}
+
+/* ---------- dialogs ---------- */
+const dlg = $("#dlg");
+function openDlg(html, wide){ dlg.className = wide ? "wide" : ""; dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); const f = dlg.querySelector("[autofocus]"); if (f) f.focus(); }
+function closeDlg(){ if (dlg.open) dlg.close(); UI.confirmDelete = null; }
+dlg.addEventListener("click", e => { if (e.target === dlg) closeDlg(); });
+const head = (t) => `<div class="dlg-head"><h2>${t}</h2><button type="button" class="icon-btn" data-action="close" aria-label="Cerrar"><span class="ms">close</span></button></div>`;
+
+function propForm(p){
+  const e = p || {};
+  UI.tmpPhotos = [...(e.photos||[])];
+  const portals = [["Zonaprop","https://www.zonaprop.com.ar/"],["RE/MAX","https://www.remax.com.ar/"],["Argenprop","https://www.argenprop.com/"],["Mercado Libre","https://inmuebles.mercadolibre.com.ar/"]];
+  openDlg(`<form class="dlg" data-form="prop" data-id="${e.id||""}">
+    ${head(p?"Editar propiedad":"Agregar propiedad")}
+    <div class="dlg-body"><div class="form">
+      <div class="field"><label for="f-url">Link de la publicación</label>
+        <div class="urlrow"><input id="f-url" type="text" inputmode="url" placeholder="https://www.zonaprop.com.ar/propiedades/..." value="${esc(e.url||"")}" ${p?"":"autofocus"}><button type="button" class="btn btn-tonal" data-action="parse-url"><span class="ms">auto_awesome</span>Completar</button></div>
+        <div id="found" class="found"></div>
+        <div class="portals">${portals.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener"><span class="ms">open_in_new</span>${n}</a>`).join("")}</div>
+        <span class="help">Pegá el link del aviso y tocá Completar. Se cargan los datos y las fotos de la publicación.</span>
+      </div>
+      <div class="field paste-box"><label for="f-text"><span class="ms" style="font-size:16px;vertical-align:-3px">content_paste</span> Si el portal no deja leer el aviso: pegá su texto</label>
+        <textarea id="f-text" placeholder="En el aviso: Ctrl + A para seleccionar todo, Ctrl + C para copiar, y pegalo acá con Ctrl + V."></textarea>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="btn btn-tonal btn-sm" data-action="parse-text"><span class="ms">auto_awesome</span>Extraer datos del texto</button><span id="found-text" class="found"></span></div>
+        <span class="help">Toma precio, expensas, superficie, ambientes, baños, cocheras, piso, dirección y teléfono. Revisá los campos marcados en verde antes de guardar.</span>
+      </div>
+      <div class="field"><label for="f-title">Título</label><input id="f-title" required value="${esc(e.title||"")}" placeholder="Departamento 3 ambientes con balcón"></div>
+      <div class="field h"><label for="f-barrio">Ubicación aproximada</label><input id="f-barrio" required value="${esc(e.barrio||"")}" placeholder="Palermo"></div>
+      <div class="field h"><label for="f-address">Dirección</label><input id="f-address" value="${esc(e.address||"")}" placeholder="Gorriti 4800"></div>
+      <div class="field h"><label for="f-price">Precio (USD)</label><input id="f-price" type="number" min="0" step="500" required value="${e.price??""}"></div>
+      <div class="field h"><label for="f-exp">Expensas ($ por mes)</label><input id="f-exp" type="number" min="0" step="1000" value="${e.expensas??""}"></div>
+      <div class="field t"><label for="f-amb">Ambientes</label><input id="f-amb" type="number" min="1" max="12" value="${e.amb??""}"></div>
+      <div class="field t"><label for="f-m2">Superficie (m²)</label><input id="f-m2" type="number" min="0" value="${e.m2??""}"></div>
+      <div class="field t"><label for="f-banos">Baños</label><input id="f-banos" type="number" min="0" max="10" value="${e.banos??""}"></div>
+      <div class="field t"><label for="f-coch">Cocheras</label><input id="f-coch" type="number" min="0" max="10" value="${e.cocheras??""}"></div>
+      <div class="field t"><label for="f-piso">Piso</label><input id="f-piso" value="${esc(e.piso??"")}" placeholder="4 o PB"></div>
+      <div class="field t"><label for="f-pisos">Pisos del edificio</label><input id="f-pisos" type="number" min="1" value="${e.pisos??""}"></div>
+      <div class="field"><label for="f-phone">Teléfono del anunciante</label><input id="f-phone" type="tel" value="${esc(e.phone||"")}" placeholder="+54 11 ..."><span class="help"><span class="ms" style="font-size:14px;vertical-align:-2px">lock</span> Solo lo ven el broker y el asistente.</span></div>
+      <div class="field"><label>Fotos</label><div class="thumbs" id="thumbs">${thumbsHTML()}</div></div>
+    </div></div>
+    <div class="dlg-foot">${p && isStaff()?`<button type="button" class="btn ${UI.confirmDelete===p.id?"btn-danger":"btn-text"}" data-action="del-prop" data-id="${p.id}" style="margin-right:auto">${UI.confirmDelete===p.id?"Confirmar eliminación":"Eliminar"}</button>`:""}<button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">${p?"Guardar cambios":isBroker()?"Agregar y aprobar":"Agregar para aprobación"}</button></div>
+  </form>`);
+}
+function thumbsHTML(){
+  return UI.tmpPhotos.map((src,i)=>`<div class="thumb"><img src="${src}" alt="Foto ${i+1}"><button type="button" data-action="rm-photo" data-i="${i}" aria-label="Quitar foto"><span class="ms">close</span></button></div>`).join("") +
+    `<label class="upload" title="Subir fotos"><span class="ms">add_photo_alternate</span><input type="file" accept="image/*" multiple data-upload="photos"></label>`;
+}
+async function readListing(url){
+  if (!/^https?:$/.test(location.protocol)) return {ok:false, reason:"no_server"};
+  try {
+    const r = await fetch("/api/leer-aviso?url=" + encodeURIComponent(url), {signal: AbortSignal.timeout(25000), headers: SRV.token ? {authorization:"Bearer "+SRV.token} : {}});
+    const ct = r.headers.get("content-type")||"";
+    if (!ct.includes("json")) return {ok:false, reason:"no_server"};
+    const data = await r.json();
+    if (!r.ok) return {ok:false, reason:data.error||"error", message:data.message};
+    return {ok:true, data};
+  } catch(e){ return {ok:false, reason:"no_server"}; }
+}
+function fillProp(info, overwrite){
+  const map = {title:"#f-title",barrio:"#f-barrio",address:"#f-address",price:"#f-price",expensas:"#f-exp",amb:"#f-amb",m2:"#f-m2",banos:"#f-banos",cocheras:"#f-coch",piso:"#f-piso",pisos:"#f-pisos",phone:"#f-phone"};
+  let n = 0;
+  for (const [k, sel] of Object.entries(map)){
+    const v = info[k], el = $(sel);
+    if (v==null || v==="" || !el) continue;
+    if (el.value && !overwrite) continue;
+    el.value = v; el.classList.add("filled"); n++;
+  }
+  return n;
+}
+function resizeImage(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => {
+      const max = 960, k = Math.min(1, max/Math.max(img.width,img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",.72)); };
+      img.onerror = rej; img.src = r.result; };
+    r.onerror = rej; r.readAsDataURL(file);
+  });
+}
+
+function detailDlg(p){
+  const staff = isStaff();
+  const photos = (p.photos&&p.photos.length) ? p.photos : [cover(p)];
+  const visits = op().visits.filter(v=>v.propId===p.id && v.state!=="rechazada").sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const docList = (arr, kind) => `<ul class="doclist">${arr.map((d,i)=>`<li><span class="ms" style="font-size:18px;color:var(--ink-3)">description</span><span class="t">${esc(d.name)}</span><small>${kb(d.size)}</small>${staff?`<button type="button" class="icon-btn" style="width:30px;height:30px" data-action="rm-doc" data-kind="${kind}" data-i="${i}" data-id="${p.id}" aria-label="Quitar documento"><span class="ms" style="font-size:18px">close</span></button>`:""}</li>`).join("")||`<li style="color:var(--ink-3)">Sin documentos</li>`}</ul>${staff?`<label class="btn btn-outline btn-sm" style="align-self:flex-start"><span class="ms">upload_file</span>Subir documento<input type="file" hidden multiple data-upload="${kind}" data-id="${p.id}"></label>`:""}`;
+  const ro = (label, val) => `<div class="fact"><small>${label}</small><b>${val}</b></div>`;
+  let stage = "";
+  if (staff){
+    stage = `<div class="box"><h3><span class="ms">flag</span>Estado de la propiedad</h3>
+      <div class="form">
+        <div class="field"><label for="d-status">Estado</label><select id="d-status" data-action-change="stage-preview">${STATUS_KEYS.map(k=>`<option value="${k}" ${p.status===k?"selected":""}>${STATUS[k].label}</option>`).join("")}</select></div>
+      </div>
+      <div id="stage-fields">${stageFields(p, p.status)}</div>
+    </div>`;
+  } else {
+    if (["oferta","negociacion"].includes(p.status)) stage = `<div class="box"><h3><span class="ms">request_quote</span>${STATUS[p.status].label}</h3><div class="facts" style="margin:0">${ro("Ofrecido",usd(p.offer.price))}${ro("Depósito",usd(p.offer.deposit))}${p.status==="negociacion"?ro("Contraoferta",usd(p.nego.counter)):""}</div><b style="font-size:13px">Documentos</b>${docList(p.offer.docs.concat(p.nego.docs),"none")}</div>`;
+    if (p.status==="reservada") stage = reserveRO(p);
+  }
+  const clientActions = !staff ? (p.status==="nueva" ? `<button class="btn btn-tonal" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>` : p.status==="descartada" ? `<button class="btn btn-text" data-action="restore" data-id="${p.id}"><span class="ms">undo</span>Volver a considerar</button>` : `<button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>`) : "";
+  const brokerActions = isBroker() && p.approval==="aprobada" ? `<button class="btn btn-text" data-action="unapprove" data-id="${p.id}"><span class="ms">visibility_off</span>Desaprobar</button>` : isBroker() && p.approval!=="aprobada" ? `<button class="btn btn-filled" data-action="approve" data-id="${p.id}"><span class="ms">check</span>Aprobar para el cliente</button>${p.approval==="pendiente"?`<button class="btn btn-text" data-action="reject" data-id="${p.id}">Rechazar</button>`:""}` : "";
+  openDlg(`<div class="dlg">
+    ${head(esc(p.title))}
+    <div class="dlg-body">
+      <div class="detail-grid">
+        <div>
+          <div class="gallery">${photos.map(s=>`<img src="${s}" alt="">`).join("")}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
+            ${staff&&p.approval!=="aprobada"?`<span class="status s-${p.approval}">${p.approval==="pendiente"?"Por aprobar":"No aprobada"}</span>`:""}
+            <span class="status s-${p.status}">${STATUS[p.status].label}</span>
+            ${p.rank&&!["nueva","descartada"].includes(p.status)?`<span class="status" style="background:var(--ink);color:#fff">Prioridad #${p.rank}</span>`:""}
+          </div>
+          <div class="price" style="font-size:30px;margin-top:10px">${usd(p.price)}</div>
+          <div class="exp">${p.expensas?ars(p.expensas)+" de expensas por mes":"Sin expensas"}${p.price&&p.m2?" · USD "+fmtNum(Math.round(p.price/p.m2))+" por m²":""}</div>
+          <div class="facts">${ro("Ambientes",fmtNum(p.amb))}${ro("Superficie",fmtNum(p.m2)+" m²")}${ro("Baños",fmtNum(p.banos))}${ro("Cocheras",fmtNum(p.cocheras))}${ro("Piso",esc(p.piso??"—")+" de "+esc(p.pisos??"—"))}${ro("Barrio",esc(p.barrio||"—"))}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn btn-outline btn-sm" href="${mapsUrl((p.address||"")+" "+(p.barrio||""))}" target="_blank" rel="noopener"><span class="ms">map</span>Ver en el mapa</a>
+            ${p.url?`<a class="btn btn-outline btn-sm" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="ms">open_in_new</span>Aviso en ${esc(p.portal||"el portal")}</a>`:""}
+          </div>
+          ${staff&&p.phone?`<div class="private" style="margin-top:12px"><span class="ms">lock</span>Anunciante: <span class="num">${esc(p.phone)}</span> <a href="tel:${esc(p.phone.replace(/\s/g,""))}" style="margin-left:auto">Llamar</a></div>`:""}
+          ${p.choiceNote&&p.status==="descartada"?`<div class="result" style="margin-top:12px">Motivo: ${esc(p.choiceNote)}</div>`:""}
+        </div>
+        <div class="stack">
+          ${stage}
+          <div class="box"><h3><span class="ms">event</span>Visitas</h3>${visits.length?visits.map(v=>`<div style="font-size:13px"><b>${fmtDateShort(v.date)} · ${v.time}</b> <span class="status s-${v.state}" style="height:22px">${v.state==="propuesta"?"Propuesta":parseYmd(v.date)<today()?"Realizada":"Confirmada"}</span>${v.result?`<div class="result" style="margin-top:4px">${RATING[v.result.rating]?.label||""}${v.result.note?" · "+esc(v.result.note):""}</div>`:""}</div>`).join(""):`<small style="color:var(--ink-3)">Sin visitas todavía.</small>`}
+            ${staff&&p.approval==="aprobada"&&p.status!=="descartada"?`<button class="btn btn-text btn-sm" style="align-self:flex-start" data-action="add-visit" data-id="${p.id}"><span class="ms">edit_calendar</span>Proponer visita</button>`:""}</div>
+          <div class="box"><h3><span class="ms">history</span>Historial</h3><ul class="log">${[...(p.log||[])].reverse().map(l=>`<li><small>${fmtDateShort(l.date)}</small><span>${esc(l.text)}</span></li>`).join("")||"<li>Sin movimientos</li>"}</ul></div>
+        </div>
+      </div>
+    </div>
+    <div class="dlg-foot">${staff?`<button class="btn btn-text" data-action="edit-prop" data-id="${p.id}" style="margin-right:auto"><span class="ms">edit</span>Editar datos</button>`:""}${clientActions}${brokerActions}${staff?`<button class="btn btn-filled" data-action="save-stage" data-id="${p.id}">Guardar estado</button>`:`<button class="btn btn-filled" data-action="close">Listo</button>`}</div>
+  </div>`, true);
+}
+function reserveRO(p){
+  const r = p.reserve;
+  return `<div class="box"><h3><span class="ms">verified</span>Reserva</h3>
+    <div class="progress"><i style="width:${r.progress||0}%"></i></div><small class="num">Avance ${r.progress||0}%</small>
+    <dl class="kv" style="font-size:13px"><dt>Escribanía</dt><dd>${r.notary?"Aprobada":"Pendiente"}</dd><dt>Costos estimados</dt><dd>${usd(r.costs)}</dd><dt>Comisiones</dt><dd>${usd(r.commission)}</dd><dt>Fecha de escritura</dt><dd>${r.deedDate?fmtDateLong(r.deedDate):"—"}</dd></dl>
+    ${r.news.length?`<b style="font-size:13px">Novedades</b><ul class="log">${[...r.news].reverse().map(n=>`<li><small>${fmtDateShort(n.date)}</small><span>${esc(n.text)}</span></li>`).join("")}</ul>`:""}</div>`;
+}
+function stageFields(p, st){
+  const docs = (arr, kind) => `<ul class="doclist">${arr.map((d,i)=>`<li><span class="ms" style="font-size:18px;color:var(--ink-3)">description</span><span class="t">${esc(d.name)}</span><small>${kb(d.size)}</small><button type="button" class="icon-btn" style="width:30px;height:30px" data-action="rm-doc" data-kind="${kind}" data-i="${i}" data-id="${p.id}" aria-label="Quitar documento"><span class="ms" style="font-size:18px">close</span></button></li>`).join("")||`<li style="color:var(--ink-3)">Sin documentos</li>`}</ul><label class="btn btn-outline btn-sm" style="align-self:flex-start;margin-top:6px"><span class="ms">upload_file</span>Subir documento<input type="file" hidden multiple data-upload="${kind}" data-id="${p.id}"></label>`;
+  if (st==="oferta" || st==="negociacion"){
+    return `<div class="form" style="margin-top:10px">
+      <div class="field h"><label for="d-offer">Precio ofrecido (USD)</label><input id="d-offer" type="number" min="0" step="500" value="${p.offer.price??""}"></div>
+      <div class="field h"><label for="d-dep">Depósito (USD)</label><input id="d-dep" type="number" min="0" step="100" value="${p.offer.deposit??""}"></div>
+      <div class="field"><label>Documentos de la oferta</label>${docs(p.offer.docs,"offer")}</div>
+      ${st==="negociacion"?`<div class="field"><label for="d-counter">Contraoferta a responder (USD)</label><input id="d-counter" type="number" min="0" step="500" value="${p.nego.counter??""}"></div><div class="field"><label>Documentos de la negociación</label>${docs(p.nego.docs,"nego")}</div>`:""}
+    </div>`;
+  }
+  if (st==="reservada"){
+    const r = p.reserve;
+    return `<div class="form" style="margin-top:10px">
+      <div class="field h"><label for="d-prog">Avance hasta la firma (%)</label><input id="d-prog" type="number" min="0" max="100" step="5" value="${r.progress||0}"></div>
+      <div class="field h"><label for="d-deed">Fecha de escritura</label><input id="d-deed" type="date" value="${r.deedDate||""}"></div>
+      <div class="field h"><label for="d-costs">Costos estimados (USD)</label><input id="d-costs" type="number" min="0" value="${r.costs??""}"></div>
+      <div class="field h"><label for="d-comm">Comisiones (USD)</label><input id="d-comm" type="number" min="0" value="${r.commission??""}"></div>
+      <div class="field"><label class="check"><input id="d-notary" type="checkbox" ${r.notary?"checked":""}> Escribanía aprobada</label></div>
+      <div class="field"><label for="d-news">Nueva novedad</label><textarea id="d-news" placeholder="Ej.: Llegó el informe de dominio sin observaciones."></textarea></div>
+      ${r.news.length?`<ul class="log">${[...r.news].reverse().map(n=>`<li><small>${fmtDateShort(n.date)}</small><span>${esc(n.text)}</span></li>`).join("")}</ul>`:""}
+    </div>`;
+  }
+  if (st==="descartada") return `<div class="form" style="margin-top:10px"><div class="field"><label for="d-reason">Motivo</label><input id="d-reason" value="${esc(p.choiceNote||"")}" placeholder="Ej.: El propietario no aceptó la oferta"></div></div>`;
+  return "";
+}
+
+function visitForm(v, presetProp, quick){
+  const o = op();
+  const opts = o.props.filter(p=>p.approval==="aprobada" && p.status!=="descartada").sort((a,b)=>(a.rank??99)-(b.rank??99));
+  if (!opts.length){ snack("Primero aprobá alguna propiedad para el cliente."); return; }
+  const e = v || {propId: presetProp || (ranked()[0]||opts[0]).id, date: quick ? "" : ymd(addDays(today(),1)), time: quick ? "" : "18:30", duration:45};
+  const p0 = prop(e.propId);
+  openDlg(`<form class="dlg" data-form="visit" data-id="${v?v.id:""}" data-quick="${quick?1:""}">
+    ${head(v?"Editar visita":"Nueva visita")}
+    <div class="dlg-body"><div class="form">
+      ${quick ? `<div class="field"><input type="hidden" id="v-prop" value="${p0.id}"><div class="vpick"><img src="${cover(p0)}" alt=""><div><b>${esc(p0.title)}</b><small>${esc(p0.barrio||"")} · ${usd(p0.price)}</small></div></div><span class="help">Nombre y ubicación tomados de la publicación. Completá el día y la hora.</span></div>` : `<div class="field"><label for="v-prop">Propiedad</label><select id="v-prop" data-action-change="visit-prop">${opts.map(p=>`<option value="${p.id}" ${p.id===e.propId?"selected":""}>${p.rank&&!["nueva"].includes(p.status)?"#"+p.rank+" · ":""}${esc(p.title)} · ${esc(p.barrio)}</option>`).join("")}</select><span class="help">El nombre de la visita se toma de la publicación.</span></div>`}
+      <div class="field t"><label for="v-date">Fecha</label><input id="v-date" type="date" required value="${e.date}" ${quick?"autofocus":""} data-action-change="visit-check"></div>
+      <div class="field t"><label for="v-time">Hora</label><input id="v-time" type="time" required step="900" value="${e.time}" data-action-change="visit-check"></div>
+      <div class="field t"><label for="v-dur">Duración</label><select id="v-dur" data-action-change="visit-check">${[30,45,60,90].map(m=>`<option value="${m}" ${+e.duration===m?"selected":""}>${m} min</option>`).join("")}</select></div>
+      <div class="field"><label for="v-addr">Dirección</label><input id="v-addr" required value="${esc(v?v.address:((p0.address||"")+(p0.barrio?", "+p0.barrio:"")))}"><a id="v-map" class="help" href="${mapsUrl(v?v.address:(p0.address||"")+" "+(p0.barrio||""))}" target="_blank" rel="noopener">Verificar en Google Maps</a></div>
+      <div class="field" id="v-check"></div>
+    </div></div>
+    <div class="dlg-foot">${v?`<button type="button" class="btn ${UI.confirmDelete===v.id?"btn-danger":"btn-text"}" data-action="del-visit" data-id="${v.id}" style="margin-right:auto">${UI.confirmDelete===v.id?"Confirmar cancelación":"Cancelar visita"}</button>`:""}<button type="button" class="btn btn-text" data-action="close">Cerrar</button><button class="btn btn-filled" type="submit">${isBroker()?"Guardar y confirmar":"Proponer al broker"}</button></div>
+  </form>`);
+  visitCheck();
+}
+function visitCheck(){
+  const el = $("#v-check"); if (!el) return;
+  const d = $("#v-date").value, t = $("#v-time").value, dur = +$("#v-dur").value;
+  if (!d || !t){ el.innerHTML = ""; return; }
+  const ok = inPrefs(d,t,dur);
+  const clash = op().visits.find(v => v.date===d && v.state!=="rechazada" && v.id!==($("form[data-form=visit]").dataset.id) && Math.abs(toMin(v.time)-toMin(t)) < Math.max(v.duration||45, dur));
+  el.innerHTML = (ok ? `<div class="note" style="background:var(--android-soft)"><span class="ms" style="color:var(--primary)">check_circle</span>Dentro de la disponibilidad del cliente (${esc(fmtDateLong(d))}).</div>` : `<div class="note" style="background:var(--amber-soft)"><span class="ms" style="color:var(--amber)">warning</span>Fuera de los horarios que indicó ${esc(clientLabel())}. Podés proponerla igual.</div>`) +
+    (clash ? `<div class="note" style="background:var(--red-soft);margin-top:8px"><span class="ms" style="color:var(--red)">event_busy</span>Se superpone con otra visita a las ${clash.time}.</div>` : "");
+}
+function visitDetail(v){
+  const p = prop(v.propId);
+  openDlg(`<div class="dlg">${head("Visita")}<div class="dlg-body">${visitCard(v)}</div><div class="dlg-foot"><button class="btn btn-text" data-action="open" data-id="${p.id}">Ver propiedad</button><button class="btn btn-filled" data-action="close">Listo</button></div></div>`);
+}
+function resultForm(v){
+  const p = prop(v.propId);
+  UI.visitRating = v.result ? v.result.rating : null;
+  openDlg(`<form class="dlg" data-form="result" data-id="${v.id}">
+    ${head("¿Cómo fue la visita?")}
+    <div class="dlg-body"><p style="margin:0 0 14px;color:var(--ink-2)">${esc(p.title)} · ${fmtDateLong(v.date)}</p>
+      <div class="rate" role="group" aria-label="Impresión">${Object.entries(RATING).map(([k,r])=>`<button type="button" data-action="rate" data-k="${k}" aria-pressed="${UI.visitRating===k}"><span class="ms">${r.icon}</span>${r.label}</button>`).join("")}</div>
+      <div class="form" style="margin-top:16px">
+        <div class="field"><label for="r-note">Comentarios</label><textarea id="r-note" placeholder="Luz, ruidos, estado, lo que haya que revisar…">${esc(v.result?v.result.note:"")}</textarea></div>
+        <div class="field"><label for="r-next">Próximo paso</label><select id="r-next"><option value="">Seguir evaluando</option>${isStaff()?`<option value="oferta">Pasar a Oferta</option>`:`<option value="oferta">Quiero hacer una oferta</option>`}<option value="descartada">Descartar esta propiedad</option></select></div>
+      </div></div>
+    <div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">Guardar</button></div>
+  </form>`);
+}
+function clientForm(c){
+  const e = c || {name:"",email:"",slots:[{days:[1,2,3,4,5],from:"18:00",to:"20:00"}],notes:""};
+  UI.tmpSlots = JSON.parse(JSON.stringify(e.slots && e.slots.length ? e.slots : [{days:[1,2,3,4,5],from:"18:00",to:"20:00"}]));
+  openDlg(`<form class="dlg" data-form="client" data-id="${c?c.id:""}">
+    ${head(c?(isStaff()?"Editar cliente":"Mis horarios"):"Agregar cliente")}
+    <div class="dlg-body"><div class="form">
+      <div class="field h"><label for="c-name">Nombre</label><input id="c-name" required value="${esc(e.name)}"></div>
+      <div class="field h"><label for="c-email">Cuenta de Gmail</label><input id="c-email" type="email" value="${esc(e.email)}" placeholder="nombre@gmail.com"></div>
+      <div class="field"><label>Preferencias de agenda</label><div id="slots" class="stack" style="gap:10px">${slotsHTML()}</div><button type="button" class="btn btn-text btn-sm" data-action="add-slot" style="align-self:flex-start;margin-top:4px"><span class="ms">add</span>Agregar franja</button></div>
+      <div class="field"><label for="c-notes">Notas</label><textarea id="c-notes" placeholder="Qué busca, zonas, restricciones">${esc(e.notes||"")}</textarea></div>
+    </div></div>
+    <div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">Guardar</button></div>
+  </form>`);
+}
+function slotsHTML(){
+  return UI.tmpSlots.map((s,i)=>`<div class="slot-edit"><div class="daypick">${[1,2,3,4,5,6,0].map(d=>`<button type="button" data-action="slot-day" data-i="${i}" data-day="${d}" aria-pressed="${s.days.includes(d)}">${DAYS[d]}</button>`).join("")}</div>
+    <div class="times"><label for="s-from-${i}" style="font-size:13px">De</label><input id="s-from-${i}" type="time" value="${s.from}" data-slot="${i}" data-k="from"><label for="s-to-${i}" style="font-size:13px">a</label><input id="s-to-${i}" type="time" value="${s.to}" data-slot="${i}" data-k="to"><button type="button" class="icon-btn" data-action="rm-slot" data-i="${i}" aria-label="Quitar franja" style="margin-left:auto"><span class="ms">delete</span></button></div></div>`).join("") || `<small style="color:var(--ink-3)">Sin franjas. Agregá al menos una.</small>`;
+}
+function textForm(kind, title, label, value, btn){
+  openDlg(`<form class="dlg" data-form="${kind}">${head(title)}<div class="dlg-body"><div class="form"><div class="field"><label for="t-val">${label}</label><input id="t-val" required value="${esc(value)}" autofocus placeholder="Ej.: Compra Javier"></div></div></div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">${btn}</button></div></form>`);
+}
+
+/* ---------- menus ---------- */
+let menuEl = null;
+function closeMenu(){ if (menuEl){ menuEl.remove(); menuEl = null; } }
+function openMenu(anchor, html){
+  closeMenu();
+  menuEl = document.createElement("div"); menuEl.className = "menu"; menuEl.setAttribute("role","menu"); menuEl.innerHTML = html;
+  document.body.appendChild(menuEl);
+  const r = anchor.getBoundingClientRect();
+  const w = menuEl.offsetWidth;
+  menuEl.style.top = (r.bottom + 6) + "px";
+  menuEl.style.left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12)) + "px";
+}
+
+/* ---------- actions ---------- */
+function setView(v){ UI.view = v; UI.confirmDelete = null; if (v==="operacion") UI.team = null; if (v==="brokers") UI.admin = null; try { history.replaceState(null,"","#"+v); } catch(e){} render(); window.scrollTo(0,0); }
+function commit(msg){ save(); render(); if (msg) snack(msg); }
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-action]");
+  if (menuEl && !e.target.closest(".menu") && !(t && /menu$/.test(t.dataset.action))) closeMenu();
+  if (!t) return;
+  const a = t.dataset.action, id = t.dataset.id;
+  const o = op();
+  switch(a){
+    case "nav": setView(t.dataset.view); break;
+    case "close": closeDlg(); break;
+    case "pfilter": UI.propFilter = t.dataset.f; render(); break;
+    case "open": { const p = prop(id); if (p){ closeMenu(); detailDlg(p); } break; }
+    case "add-prop": propForm(null); break;
+    case "edit-prop": propForm(prop(id)); break;
+    case "del-prop": {
+      if (UI.confirmDelete !== id){ UI.confirmDelete = id; t.classList.replace("btn-text","btn-danger"); t.textContent = "Confirmar eliminación"; break; }
+      o.props = o.props.filter(p=>p.id!==id); o.visits = o.visits.filter(v=>v.propId!==id); renumber(); closeDlg(); commit("Propiedad eliminada"); break;
+    }
+    case "client-reject": {
+      const v = o.visits.find(x=>x.id===id); const p = prop(v.propId);
+      openDlg(`<form class="dlg" data-form="client-reject" data-id="${v.id}">${head("¿No podés ir a esta visita?")}<div class="dlg-body">
+        <div class="vpick"><img src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${fmtDateLong(v.date)} · ${v.time} · ${esc(v.address)}</small></div></div>
+        <div class="form" style="margin-top:16px"><div class="field"><label for="cr-reason">Motivo o un horario que te quede mejor (opcional)</label><textarea id="cr-reason" autofocus placeholder="Ej.: Me surgió una reunión. ¿Puede ser el jueves a las 19?"></textarea></div></div>
+        <p style="color:var(--ink-2);margin:12px 0 0;font-size:14px">Le vamos a avisar al broker y al asistente para que te propongan otro horario.</p>
+      </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Volver</button><button class="btn btn-danger" type="submit"><span class="ms">event_busy</span>Rechazar visita</button></div></form>`);
+      break;
+    }
+    case "notice-read": { const n = notices().find(x=>x.id===id); if (n){ n.seen = [...new Set([...(n.seen||[]), role()])]; } closeMenu(); commit(); break; }
+    case "notice-open": { const n = notices().find(x=>x.id===id); closeMenu(); UI.view = "agenda"; if (n && n.visitId){ const v = o.visits.find(x=>x.id===n.visitId); if (v) UI.weekStart = ymd(weekMonday(parseYmd(v.date))); } try{history.replaceState(null,"","#agenda");}catch(e){} render(); break; }
+    case "notif-menu": {
+      if (menuEl){ closeMenu(); break; }
+      const list = notices().slice(0,8), r = role();
+      openMenu(t, `<div class="lbl">Avisos</div>${list.length?list.map(n=>`<button class="nitem ${(n.seen||[]).includes(r)?"":"unread"}" data-action="notice-open" data-id="${n.id}"><span class="ms" style="color:var(--red)">event_busy</span><span>${esc(n.text)}${n.reason?`<small>Motivo: ${esc(n.reason)}</small>`:""}<small>${fmtDateShort(n.date)}</small></span></button>`).join(""):`<div style="padding:8px 12px;color:var(--ink-3);font-size:14px">No hay avisos.</div>`}`);
+      menuEl.style.maxWidth = "360px";
+      const rr = t.getBoundingClientRect(); menuEl.style.left = Math.max(12, rr.right - menuEl.offsetWidth) + "px";
+      break;
+    }
+    case "card-visit": {
+      const p = prop(id);
+      if (p.approval!=="aprobada"){ snack(isBroker() ? "Aprobá la propiedad primero para poder agendar la visita." : "El broker tiene que aprobar la propiedad antes de agendar."); break; }
+      if (p.status==="descartada"){ snack("Está descartada. Volvé a ponerla en consideración para agendar."); break; }
+      UI.confirmDelete = null; visitForm(null, id, true); break;
+    }
+    case "card-del": {
+      const p = prop(id);
+      const nv = o.visits.filter(v=>v.propId===id).length;
+      openDlg(`<div class="dlg">${head("¿Eliminar esta propiedad?")}<div class="dlg-body"><div class="vpick"><img src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.barrio||"")} · ${usd(p.price)}</small></div></div><p style="color:var(--ink-2);margin:14px 0 0">Se quita de la lista para todos, también para el cliente${nv?`, y se cancela${nv>1?"n sus "+nv+" visitas":" su visita"} en la agenda`:""}. No se puede deshacer.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="card-del-ok" data-id="${id}"><span class="ms">delete</span>Eliminar</button></div></div>`);
+      break;
+    }
+    case "card-del-ok": {
+      const p = prop(id);
+      o.props = o.props.filter(x=>x.id!==id); o.visits = o.visits.filter(v=>v.propId!==id); renumber();
+      closeDlg(); commit("“"+p.title+"” eliminada de la lista"); break;
+    }
+    case "no-phone": snack("Falta el teléfono del anunciante. Cargalo con Editar datos."); break;
+    case "parse-url": {
+      const url = $("#f-url").value.trim();
+      const info = parseListing(url);
+      const f = $("#found");
+      if (!info){ f.innerHTML = `<span style="color:var(--red)">Ese link no es válido. Copialo completo desde la barra del navegador.</span>`; break; }
+      fillProp(info);
+      t.disabled = true; const label = t.innerHTML; t.innerHTML = `<span class="ms spin">progress_activity</span>Leyendo el aviso…`;
+      f.innerHTML = `<span style="color:var(--ink-2)">Abriendo el aviso en ${esc(info.portal||"el portal")}…</span>`;
+      const res = await readListing(url);
+      t.disabled = false; t.innerHTML = label;
+      if (!document.body.contains(f)) break;
+      if (res.ok){
+        const merged = Object.assign(parseText(res.data.text||""), res.data.fields||{});
+        if (!merged.barrio && info.barrio) merged.barrio = info.barrio;
+        fillProp(merged, true);
+        const before = UI.tmpPhotos.length;
+        (res.data.photos||[]).forEach(src => { if (!UI.tmpPhotos.includes(src)) UI.tmpPhotos.push(src); });
+        $("#thumbs").innerHTML = thumbsHTML();
+        const nPh = UI.tmpPhotos.length - before;
+        const labels = {price:"precio",expensas:"expensas",m2:"m²",amb:"ambientes",banos:"baños",cocheras:"cocheras",piso:"piso",pisos:"pisos",address:"dirección",barrio:"barrio",phone:"teléfono",title:"título"};
+        const got = Object.keys(labels).filter(k=>merged[k]!=null && merged[k]!=="").map(k=>labels[k]);
+        if (nPh) got.push(nPh + (nPh===1?" foto":" fotos"));
+        const cur = res.data.fields && res.data.fields.currency && res.data.fields.currency!=="USD" ? ` El precio está en ${esc(res.data.fields.currency)} (${fmtNum(res.data.fields.priceOther)}): cargalo en dólares.` : "";
+        const miss = ["price","expensas","phone"].filter(k=>merged[k]==null||merged[k]==="").map(k=>labels[k]);
+        f.innerHTML = `<span class="ms" style="font-size:18px">check_circle</span>Leído de ${esc(res.data.portal||info.portal)}: ${got.join(", ")}.${cur}${miss.length?` Falta: ${miss.join(", ")}.`:""} Revisá los campos en verde.`;
+      } else if (res.reason === "no_server"){
+        const got = [info.portal, info.amb && info.amb+" ambientes", info.barrio, info.m2 && info.m2+" m²"].filter(Boolean);
+        f.innerHTML = `<span style="color:var(--amber)">${got.length?"Del link: "+got.map(esc).join(" · ")+". ":""}La lectura completa del aviso funciona en la versión publicada en Netlify. Acá pegá el texto del aviso abajo.</span>`;
+        $("#f-text").focus();
+      } else {
+        f.innerHTML = `<span style="color:var(--amber)">${esc(res.message||"No se pudo leer el aviso.")} ${res.reason==="bloqueado"?"":"Podés pegar el texto del aviso abajo."}</span>`;
+        $("#f-text").focus();
+      }
+      break;
+    }
+    case "parse-text": {
+      const txt = $("#f-text").value;
+      const f = $("#found-text");
+      if (txt.trim().length < 20){ f.innerHTML = `<span style="color:var(--amber)">Primero pegá el texto del aviso.</span>`; $("#f-text").focus(); break; }
+      const info = parseText(txt);
+      const n = fillProp(info, true);
+      const labels = {price:"precio",expensas:"expensas",m2:"m²",amb:"ambientes",banos:"baños",cocheras:"cocheras",piso:"piso",pisos:"pisos",address:"dirección",barrio:"barrio",phone:"teléfono",title:"título"};
+      const got = Object.keys(labels).filter(k=>info[k]!=null && info[k]!=="").map(k=>labels[k]);
+      f.innerHTML = got.length ? `<span class="ms" style="font-size:18px">check_circle</span>Completado: ${got.join(", ")}.` : `<span style="color:var(--amber)">No encontramos datos en ese texto. Revisá que hayas copiado la página del aviso.</span>`;
+      break;
+    }
+    case "rm-photo": UI.tmpPhotos.splice(+t.dataset.i,1); $("#thumbs").innerHTML = thumbsHTML(); break;
+    case "approve": { const p = prop(id); p.approval = "aprobada"; logp(p,"Aprobada por Broker"); if (dlg.open) detailDlg(p); commit("Aprobada: "+ clientLabel() +" ya la puede ver"); break; }
+    case "unapprove": {
+      const p = prop(id); p.approval = "rechazada"; logp(p,"Desaprobada por Broker: el cliente ya no la ve");
+      const hasVisits = o.visits.some(v=>v.propId===id && v.state!=="rechazada" && parseYmd(v.date)>=today());
+      if (dlg.open) detailDlg(p);
+      commit("Desaprobada: el cliente ya no la ve. Sigue en la lista como No aprobada" + (hasVisits ? ". Ojo: tiene visitas agendadas" : ""));
+      break;
+    }
+    case "reject": { const p = prop(id); p.approval = "rechazada"; logp(p,"No aprobada por Broker"); if (dlg.open) detailDlg(p); commit("Propiedad marcada como no aprobada"); break; }
+    case "want": { const p = prop(id); const n = ranked().length+1; p.status = "leida"; p.rank = n; logp(p,`${S.session.name} la marcó para visitar (prioridad ${n})`); if (dlg.open) closeDlg(); commit("Agregada a tu ranking en el puesto "+n); break; }
+    case "discard": {
+      const p = prop(id);
+      openDlg(`<form class="dlg" data-form="discard" data-id="${p.id}">${head("¿Descartar esta propiedad?")}<div class="dlg-body">
+        <div class="vpick"><img src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.barrio||"")} · ${usd(p.price)}</small></div></div>
+        <div class="form" style="margin-top:16px"><div class="field"><label for="ds-reason">¿Por qué? (opcional, ayuda a tu broker a buscar mejor)</label><input id="ds-reason" autofocus placeholder="Ej.: Queda lejos del trabajo"></div></div>
+        <p style="color:var(--ink-2);margin:12px 0 0;font-size:14px">No se borra: pasa a <b>Descartadas</b> y la podés volver a considerar cuando quieras.</p>
+      </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">Descartar</button></div></form>`);
+      break;
+    }
+    case "ctab": UI.clientTab = t.dataset.k; render(); break;
+    case "restore": { const p = prop(id); p.status = "nueva"; p.choiceNote = ""; logp(p,`${S.session.name} la vuelve a considerar`); if (dlg.open) closeDlg(); if (!isStaff()) UI.clientTab = "revisar"; commit("Volvió a Para revisar"); break; }
+    case "rank-up": case "rank-down": {
+      const list = ranked(); const i = list.findIndex(p=>p.id===id); const j = a==="rank-up"? i-1 : i+1;
+      if (j<0 || j>=list.length) break;
+      [list[i].rank, list[j].rank] = [list[j].rank, list[i].rank];
+      logp(list[i], `Prioridad cambiada a #${list[i].rank}`);
+      commit(); break;
+    }
+    case "save-stage": {
+      const p = prop(id); const st = $("#d-status").value; const prev = p.status;
+      const num = sel => { const el = $(sel); return el && el.value!=="" ? Number(el.value) : ""; };
+      if (st==="oferta"||st==="negociacion"){ p.offer.price = num("#d-offer"); p.offer.deposit = num("#d-dep"); }
+      if (st==="negociacion"){ p.nego.counter = num("#d-counter"); }
+      if (st==="reservada"){
+        p.reserve.progress = Math.min(100,Math.max(0,num("#d-prog")||0)); p.reserve.deedDate = $("#d-deed").value; p.reserve.costs = num("#d-costs"); p.reserve.commission = num("#d-comm"); p.reserve.notary = $("#d-notary").checked;
+        const n = $("#d-news").value.trim(); if (n){ p.reserve.news.push({date:nowStamp(),text:n}); }
+      }
+      if (st==="descartada"){ p.choiceNote = $("#d-reason").value.trim(); p.rank = null; }
+      if (st!==prev){
+        p.status = st;
+        if (!["nueva","descartada"].includes(st) && p.rank==null) p.rank = ranked().length+1;
+        if (st==="nueva") p.rank = null;
+        let txt = "Estado: "+STATUS[st].label;
+        if (st==="oferta" && p.offer.price) txt += ` · USD ${fmtNum(p.offer.price)}${p.offer.deposit?" con USD "+fmtNum(p.offer.deposit)+" de depósito":""}`;
+        if (st==="negociacion" && p.nego.counter) txt += ` · contraoferta USD ${fmtNum(p.nego.counter)}`;
+        if (st==="descartada" && p.choiceNote) txt += ` · ${p.choiceNote}`;
+        logp(p, txt);
+      } else logp(p, "Datos de "+STATUS[st].label.toLowerCase()+" actualizados");
+      renumber(); closeDlg(); commit("Estado guardado"); break;
+    }
+    case "rm-doc": { const p = prop(id); const k = t.dataset.kind; (k==="offer"?p.offer.docs:p.nego.docs).splice(+t.dataset.i,1); save(); const st = $("#d-status")?.value; detailDlg(p); if (st && $("#d-status")) { $("#d-status").value = st; $("#stage-fields").innerHTML = stageFields(p, st); } break; }
+    case "add-visit": visitForm(null, id); break;
+    case "edit-visit": { if (t.dataset.notice){ const n = notices().find(x=>x.id===t.dataset.notice); if (n) n.seen = [...new Set([...(n.seen||[]), role()])]; save(); } visitForm(o.visits.find(v=>v.id===id)); break; }
+    case "open-visit": visitDetail(o.visits.find(v=>v.id===id)); break;
+    case "del-visit": {
+      if (UI.confirmDelete !== id){ UI.confirmDelete = id; t.classList.replace("btn-text","btn-danger"); t.textContent = "Confirmar cancelación"; break; }
+      const v = o.visits.find(x=>x.id===id); const p = prop(v.propId);
+      o.visits = o.visits.filter(x=>x.id!==id);
+      if (p.status==="por_visitar" && !o.visits.some(x=>x.propId===p.id && x.state==="confirmada")) p.status = "leida";
+      logp(p,`Visita del ${fmtDateShort(v.date)} cancelada`); closeDlg(); commit("Visita cancelada"); break;
+    }
+    case "confirm-visit": {
+      const v = o.visits.find(x=>x.id===id); const p = prop(v.propId);
+      v.state = "confirmada"; if (["nueva","leida"].includes(p.status)){ p.status = "por_visitar"; if (p.rank==null) p.rank = ranked().length+1; }
+      logp(p, `Visita confirmada: ${fmtDateShort(v.date)} ${v.time}`); if (dlg.open) closeDlg(); commit("Visita confirmada. El cliente ya la ve en su agenda"); break;
+    }
+    case "reject-visit": {
+      const v = o.visits.find(x=>x.id===id); v.state = "rechazada"; logp(prop(v.propId), `Broker no puede el ${fmtDateShort(v.date)} ${v.time}`); if (dlg.open) closeDlg(); commit("Visita rechazada. El asistente puede proponer otro horario"); break;
+    }
+    case "result": resultForm(o.visits.find(v=>v.id===id)); break;
+    case "rate": UI.visitRating = t.dataset.k; dlg.querySelectorAll("[data-action=rate]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.k===UI.visitRating)); break;
+    case "week": {
+      UI.weekStart = t.dataset.d==="0" ? ymd(weekMonday(today())) : ymd(addDays(parseYmd(UI.weekStart), +t.dataset.d));
+      render(); break;
+    }
+    case "edit-prefs": { const c = o.clients.find(c=>c.id===S.session.clientId) || o.clients.find(c=>c.name===S.session.name) || o.clients[0]; clientForm(c); break; }
+    case "edit-client": clientForm(o.clients.find(c=>c.id===id)); break;
+    case "add-client": clientForm(null); break;
+    case "add-slot": UI.tmpSlots.push({days:[6],from:"10:00",to:"13:00"}); $("#slots").innerHTML = slotsHTML(); break;
+    case "rm-slot": UI.tmpSlots.splice(+t.dataset.i,1); $("#slots").innerHTML = slotsHTML(); break;
+    case "slot-day": { const s = UI.tmpSlots[+t.dataset.i]; const d = +t.dataset.day; s.days = s.days.includes(d) ? s.days.filter(x=>x!==d) : [...s.days, d]; t.setAttribute("aria-pressed", s.days.includes(d)); break; }
+    case "copy-link": {
+      try { await navigator.clipboard.writeText(shareLink(o)); snack("Link copiado"); } catch(err){ snack("No se pudo copiar. Seleccioná el link y copialo a mano."); }
+      break;
+    }
+    case "new-op": textForm("new-op","Nueva operación","Nombre de la operación","","Crear"); break;
+    case "rename-op": textForm("rename-op","Renombrar operación","Nombre de la operación",o.name,"Guardar"); break;
+    case "switch-op": S.currentOp = id; UI.weekStart = null; UI.team = null; if (UI.server===true){ SRV.opId = id; saveSrv(); maybeAskPrefs(); } closeMenu(); commit("Operación: "+op().name); break;
+    case "reset":
+      openDlg(`<div class="dlg">${head("¿Empezar de cero?")}<div class="dlg-body"><p style="margin:0;color:var(--ink-2)">Se borran todas las operaciones, propiedades, visitas y avisos guardados en este navegador, y se cierra la sesión. No se puede deshacer.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="reset-ok"><span class="ms">delete_forever</span>Borrar todo</button></div></div>`);
+      break;
+    case "reset-ok": closeDlg(); S = emptyState(); UI.view = "propiedades"; UI.weekStart = null; UI.loginRole = "broker"; try{history.replaceState(null,"","#");}catch(e){} commit("Listo, empezás de cero"); break;
+    case "load-demo":
+      openDlg(`<div class="dlg">${head("¿Cargar datos de ejemplo?")}<div class="dlg-body"><p style="margin:0;color:var(--ink-2)">Reemplaza todo lo que cargaste por la operación de ejemplo “Compra Javier”.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" data-action="load-demo-ok">Cargar ejemplo</button></div></div>`);
+      break;
+    case "load-demo-ok": { closeDlg(); const sess = S.session; S = seed(); if (sess) S.session = sess; UI.view = "propiedades"; UI.weekStart = null; commit("Datos de ejemplo cargados"); break; }
+    case "op-menu": {
+      if (menuEl){ closeMenu(); break; }
+      openMenu(t, `<div class="lbl">Operaciones</div>${S.ops.map(x=>`<button data-action="switch-op" data-id="${x.id}"><span class="ms">${x.id===o.id?"check":"folder"}</span>${esc(x.name)}</button>`).join("")}${isStaff()?`<hr><button data-action="new-op"><span class="ms">add</span>Nueva operación</button>`:""}`);
+      break;
+    }
+    case "account-menu": {
+      if (menuEl){ closeMenu(); break; }
+      const head = isSuper() ? `<div class="lbl">Superusuario · ${esc(S.session.superName)}</div><div class="lbl" style="padding-top:0;text-transform:none;letter-spacing:0;font-weight:500">Cambiá de rol para ver la app como cada usuario</div>`
+        : canSwitch() ? `<div class="lbl">Modo de prueba · probar como</div>`
+        : `<div class="lbl">${esc(S.session.name)} · ${ROLES[role()].label}</div>`;
+      const roles = canSwitch() ? Object.entries(ROLES).map(([k,r])=>`<button data-action="as-role" data-role="${k}"><span class="ms">${role()===k?"check":r.icon}</span><span>${r.label}<br><small style="color:var(--ink-3)">${r.desc}</small></span></button>`).join("") + "<hr>" : "";
+      const extra = UI.server === true ? `<div class="lbl" style="padding-top:0;text-transform:none;letter-spacing:0;font-weight:500">${esc(S.session.email||"")}${UI.env?" · "+esc(UI.env.name):""}</div>` : "";
+      openMenu(t, `${head}${extra}${roles}<button data-action="logout"><span class="ms">logout</span>Cerrar sesión</button>`);
+      const m = menuEl, r = t.getBoundingClientRect(); m.style.left = Math.max(12, r.right - m.offsetWidth) + "px";
+      break;
+    }
+    case "as-role": {
+      const r = t.dataset.role; closeMenu();
+      if (!canSwitch()) break;
+      if (UI.server === true){ S.session.role = r; UI.propFilter = "todas"; UI.clientTab = null; UI.team = null; if (UI.view==="brokers") UI.view = "propiedades"; render(); snack("Ahora ves la app como "+ROLES[r].label); break; }
+      const sup = isSuper() ? {super:true, superName:S.session.superName, token:S.session.token} : {};
+      const names = {broker: isSuper() ? S.session.superName : "Lucía Paz", asistente: isSuper() ? S.session.superName : "Tomás Gil"};
+      if (r==="cliente"){ const c = o.clients[0]; S.session = Object.assign({role:r, name:c?c.name:"Cliente", clientId:c?c.id:null}, sup); }
+      else S.session = Object.assign({role:r, name:names[r]}, sup);
+      UI.propFilter = "todas"; UI.clientTab = null;
+      commit("Ahora ves la app como "+ROLES[r].label); break;
+    }
+    case "admin-open": UI.adminLogin = true; render(); break;
+    case "env-menu": {
+      if (menuEl){ closeMenu(); break; }
+      const list = isSuper() && UI.admin && UI.admin.envs.length ? UI.admin.envs.map(e=>({envId:e.id, name:e.name, sub:e.brokerName})) : ((UI.me && UI.me.envs) || []).map(e=>({envId:e.envId, name:e.name, sub:ROLES[e.role].label}));
+      openMenu(t, `<div class="lbl">Ambientes</div>${list.map(e=>`<button data-action="enter-env" data-id="${e.envId}"><span class="ms">${UI.env && UI.env.id===e.envId?"check":"apartment"}</span><span>${esc(e.name)}<br><small style="color:var(--ink-3)">${esc(e.sub||"")}</small></span></button>`).join("")}${isSuper()?`<hr><button data-action="nav" data-view="brokers"><span class="ms">admin_panel_settings</span>Panel de brokers</button>`:""}`);
+      if (isSuper() && !UI.admin) loadAdmin();
+      break;
+    }
+    case "enter-env": closeMenu(); SRV.opId = null; try { await loadEnv(id, true); } catch(err){ snack(err.message); } break;
+    case "toggle-env": {
+      const act = t.dataset.active !== "true";
+      try { await api(`/admin/envs/${encodeURIComponent(id)}`, {method:"PUT", body:{active:act}}); snack(act ? "Ambiente activado" : "Ambiente desactivado: sus usuarios ya no pueden entrar"); } catch(err){ snack(err.message); }
+      UI.admin = null; render(); break;
+    }
+    case "invite": inviteDlg(t.dataset.kind, t.dataset.kind==="asistente" && op() ? [op().id] : []); break;
+    case "copy-text": try { await navigator.clipboard.writeText(t.dataset.text); snack("Link copiado"); } catch(err){ snack("No se pudo copiar. Seleccioná el link y copialo a mano."); } break;
+    case "revoke-invite": {
+      try { await api(`/invites/${encodeURIComponent(id)}`, {method:"DELETE"}); snack("Invitación anulada: el link ya no funciona"); } catch(err){ snack(err.message); }
+      if (UI.view==="brokers"){ UI.admin = null; render(); } else loadTeam();
+      break;
+    }
+    case "remove-member": {
+      const m = (UI.team && UI.team.members || []).find(x=>x.email===id);
+      openDlg(`<div class="dlg">${head("¿Quitar el acceso?")}<div class="dlg-body"><p style="margin:0;color:var(--ink-2)"><b>${esc(m ? m.name : id)}</b> (${esc(id)}) ya no va a poder entrar a ${esc(UI.env ? UI.env.name : "este ambiente")}. Lo que cargó queda guardado.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="remove-member-ok" data-id="${esc(id)}"><span class="ms">person_remove</span>Quitar acceso</button></div></div>`);
+      break;
+    }
+    case "remove-member-ok": {
+      try { await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(id)}`, {method:"DELETE"}); closeDlg(); snack("Acceso quitado"); } catch(err){ snack(err.message); }
+      loadTeam(); break;
+    }
+    case "admin-cancel": UI.adminLogin = false; render(); break;
+    case "logout": if (UI.server === true){ closeMenu(); srvLogout(); break; }
+      closeMenu(); S.session = null; UI.loginRole = "broker"; commit(); break;
+    case "login-role": UI.loginRole = t.dataset.role; render(); break;
+    case "login-day": { const d = +t.dataset.day; UI.loginDays = UI.loginDays.includes(d) ? UI.loginDays.filter(x=>x!==d) : [...UI.loginDays,d]; t.setAttribute("aria-pressed", UI.loginDays.includes(d)); break; }
+  }
+});
+document.addEventListener("keydown", e => {
+  if ((e.key==="Enter"||e.key===" ") && e.target.matches("article.pcard")){ e.preventDefault(); e.target.click(); }
+  if (e.key==="Escape") closeMenu();
+});
+dlg.addEventListener("close", () => { UI.confirmDelete = null; });
+
+document.addEventListener("change", async e => {
+  const t = e.target;
+  if (t.dataset.actionChange === "stage-preview"){ $("#stage-fields").innerHTML = stageFields(prop(dlg.querySelector("[data-action=save-stage]").dataset.id), t.value); return; }
+  if (t.dataset.actionChange === "visit-prop"){ const p = prop(t.value); const addr = (p.address||"")+(p.barrio?", "+p.barrio:""); $("#v-addr").value = addr; $("#v-map").href = mapsUrl(addr); visitCheck(); return; }
+  if (t.dataset.actionChange === "visit-check"){ visitCheck(); return; }
+  if (t.dataset.assign){
+    const email = t.dataset.assign;
+    const opIds = [...document.querySelectorAll(`input[data-assign="${CSS.escape(email)}"]:checked`)].map(x=>x.value);
+    try { await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(email)}`, {method:"PUT", body:{opIds}}); snack("Operaciones asignadas"); const m = UI.team.members.find(x=>x.email===email); if (m) m.opIds = opIds; }
+    catch(err){ snack(err.message); t.checked = !t.checked; }
+    return;
+  }
+  if (t.dataset.slot != null){ UI.tmpSlots[+t.dataset.slot][t.dataset.k] = t.value; return; }
+  const up = t.dataset.upload;
+  if (!up || !t.files) return;
+  if (up === "photos"){
+    const files = [...t.files].slice(0, 12);
+    for (const f of files){
+      try {
+        const d = await resizeImage(f);
+        if (UI.server === true){ $("#thumbs").insertAdjacentHTML("afterbegin", `<span class="found" id="up-msg">Subiendo foto…</span>`); UI.tmpPhotos.push(await uploadPhoto(d)); $("#up-msg")?.remove(); }
+        else UI.tmpPhotos.push(d);
+      } catch(err){ $("#up-msg")?.remove(); snack(err && err.message ? err.message : "No se pudo subir "+f.name); }
+    }
+    $("#thumbs").innerHTML = thumbsHTML(); return;
+  }
+  if (up === "offer" || up === "nego"){
+    const p = prop(t.dataset.id);
+    const arr = up==="offer" ? p.offer.docs : p.nego.docs;
+    [...t.files].forEach(f => arr.push({name:f.name, size:f.size}));
+    logp(p, `${t.files.length===1?"Documento subido":"Documentos subidos"}: ${[...t.files].map(f=>f.name).join(", ")}`);
+    save();
+    const st = $("#d-status").value;
+    $("#stage-fields").innerHTML = stageFields(p, st);
+    snack("Documento agregado");
+  }
+});
+
+document.addEventListener("input", e => { if (e.target.id==="v-addr"){ const m = $("#v-map"); if (m) m.href = mapsUrl(e.target.value); } });
+
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("form[data-form]"); if (!f) return;
+  e.preventDefault();
+  const kind = f.dataset.form, o = op();
+  const val = id => { const el = $(id); return el ? el.value.trim() : ""; };
+  const num = id => { const v = val(id); return v==="" ? "" : Number(v); };
+  if (kind === "invite"){
+    const k = f.dataset.kind, btn = f.querySelector("button[type=submit]"), msg = $("#in-msg");
+    const body = { type:k, name: val("#in-name") };
+    if (k === "broker") body.envName = val("#in-env");
+    else { body.envId = S.session.envId; }
+    if (k === "asistente") body.opIds = [...f.querySelectorAll("input[name=in-ops]:checked")].map(x=>x.value);
+    if (k === "cliente") body.opId = op().id;
+    btn.disabled = true;
+    try { await syncNow(); const r = await api("/invites", {method:"POST", body}); showInviteLink(r.invite); if (k==="broker"){ UI.admin = null; render(); } else loadTeam(); }
+    catch(err){ msg.textContent = err.message; btn.disabled = false; }
+    return;
+  }
+  if (kind === "admin-login"){
+    const msg = $("#ad-msg"), btn = f.querySelector("button[type=submit]");
+    btn.disabled = true; msg.textContent = "";
+    let r, data = {};
+    try { r = await fetch("/api/auth", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({password: $("#ad-pass").value})}); data = await r.json(); }
+    catch(err){ r = null; }
+    btn.disabled = false;
+    if (!r){ msg.textContent = "No se pudo conectar con el servidor. Este ingreso funciona en la versión publicada en Netlify."; return; }
+    if (!r.ok){ msg.textContent = data.message || "No se pudo ingresar."; $("#ad-pass").select(); return; }
+    const o0 = op();
+    S.session = {role:"broker", name:data.user.name, super:true, superName:data.user.name, token:data.token};
+    UI.adminLogin = false; UI.view = "propiedades";
+    commit("Hola, "+data.user.name+". Podés cambiar de rol desde tu avatar"); return;
+  }
+  if (kind === "login"){
+    const r = UI.loginRole, name = val("#lg-name") || ROLES[r].label;
+    if (r === "cliente" && !S.ops.length){ S.session = {role:r, name}; commit(); return; }
+    if (r === "cliente"){
+      S.currentOp = val("#lg-op") || S.currentOp;
+      const oo = op();
+      let c = oo.clients.find(c=>c.name.toLowerCase()===name.toLowerCase());
+      const slot = {days:UI.loginDays.length?UI.loginDays:[1,2,3,4,5], from:val("#lg-from")||"18:00", to:val("#lg-to")||"20:00"};
+      if (!c){ c = {id:uid("c"), name, email:"", slots:[slot], notes:""}; oo.clients.push(c); }
+      else if (!c.slots || !c.slots.length) c.slots = [slot];
+      S.session = {role:r, name:c.name, clientId:c.id};
+    } else S.session = {role:r, name};
+    UI.view = "propiedades"; commit("Hola, "+S.session.name); return;
+  }
+  if (kind === "prop"){
+    const id = f.dataset.id;
+    const data = {title:val("#f-title"), barrio:val("#f-barrio"), address:val("#f-address"), price:num("#f-price"), expensas:num("#f-exp"), amb:num("#f-amb"), m2:num("#f-m2"), banos:num("#f-banos"), cocheras:num("#f-coch"), piso:val("#f-piso"), pisos:num("#f-pisos"), phone:val("#f-phone"), url:(v=>v && !/^https?:\/\//i.test(v) ? "https://"+v : v)(val("#f-url")), portal:detectPortal(val("#f-url")), photos:[...UI.tmpPhotos]};
+    if (id){ Object.assign(prop(id), data); logp(prop(id),"Datos editados"); closeDlg(); commit("Cambios guardados"); }
+    else {
+      const p = Object.assign({id:uid("p"), approval: isBroker()?"aprobada":"pendiente", status:"nueva", rank:null, offer:{price:"",deposit:"",docs:[]}, nego:{counter:"",docs:[]}, reserve:{progress:0,notary:false,costs:"",commission:"",deedDate:"",news:[]}, log:[], choiceNote:""}, data);
+      logp(p, `Cargada por ${ROLES[role()].label}${isBroker()?" y aprobada":""}`);
+      o.props.unshift(p); closeDlg(); UI.propFilter = "todas"; commit(isBroker() ? "Propiedad agregada y visible para el cliente" : "Propiedad agregada. Queda esperando la aprobación del broker");
+    }
+    return;
+  }
+  if (kind === "visit"){
+    const id = f.dataset.id;
+    const data = {propId:val("#v-prop"), date:val("#v-date"), time:val("#v-time"), duration:+val("#v-dur"), address:val("#v-addr")};
+    const p = prop(data.propId);
+    if (id){ const v = o.visits.find(x=>x.id===id); const moved = v.date!==data.date || v.time!==data.time; const wasRejected = v.state==="rechazada"; Object.assign(v, data);
+      if (wasRejected){ v.state = isBroker() ? "confirmada" : "propuesta"; delete v.rejectedBy; delete v.clientReason; delete v.rejectedName; notices().forEach(n=>{ if (n.visitId===v.id){ n.seen = ["broker","asistente"]; } }); if (isBroker() && ["nueva","leida"].includes(p.status)) p.status = "por_visitar"; }
+      else if (moved && !isBroker()) v.state = "propuesta"; logp(p, `Visita reprogramada: ${fmtDateShort(v.date)} ${v.time}`); }
+    else {
+      const v = Object.assign({id:uid("v"), state: isBroker()?"confirmada":"propuesta", result:null}, data);
+      o.visits.push(v);
+      if (isBroker() && ["nueva","leida"].includes(p.status)){ p.status = "por_visitar"; if (p.rank==null) p.rank = ranked().length+1; }
+      logp(p, `Visita ${isBroker()?"confirmada":"propuesta"}: ${fmtDateShort(v.date)} ${v.time}`);
+      UI.weekStart = ymd(weekMonday(parseYmd(v.date)));
+    }
+    const quick = !!f.dataset.quick;
+    closeDlg(); if (!quick) UI.view = "agenda";
+    commit(isBroker() ? `Visita confirmada: ${fmtDateShort(data.date)} ${data.time}` : `Visita propuesta para el ${fmtDateShort(data.date)} ${data.time}. El broker tiene que confirmarla`); return;
+  }
+  if (kind === "discard"){
+    const p = prop(f.dataset.id); const why = val("#ds-reason");
+    p.status = "descartada"; p.rank = null; p.choiceNote = why;
+    logp(p, `Descartada por ${S.session.name}${why?": "+why:""}`); renumber();
+    closeDlg(); commit("Movida a Descartadas. La podés revisar cuando quieras"); return;
+  }
+  if (kind === "client-reject"){
+    const v = o.visits.find(x=>x.id===f.dataset.id); const p = prop(v.propId);
+    v.state = "rechazada"; v.rejectedBy = "cliente"; v.clientReason = val("#cr-reason"); v.rejectedName = S.session.name;
+    if (p.status==="por_visitar" && !o.visits.some(x=>x.propId===p.id && x.state==="confirmada")) p.status = "leida";
+    logp(p, `${S.session.name} no puede ir a la visita del ${fmtDateShort(v.date)} ${v.time}${v.clientReason?": "+v.clientReason:""}`);
+    notify(`${S.session.name} no puede ir a la visita del ${fmtDateShort(v.date)} ${v.time} · ${p.title}`, {visitId:v.id, propId:p.id, reason:v.clientReason});
+    closeDlg(); commit("Listo. Le avisamos al broker y al asistente"); return;
+  }
+  if (kind === "result"){
+    if (!UI.visitRating){ snack("Elegí cómo te pareció la visita"); return; }
+    const v = o.visits.find(x=>x.id===f.dataset.id); const p = prop(v.propId);
+    v.result = {rating:UI.visitRating, note:val("#r-note")};
+    logp(p, `Visita realizada · ${RATING[UI.visitRating].label}${v.result.note?": "+v.result.note:""}`);
+    const next = val("#r-next");
+    if (next === "oferta"){ p.status = "oferta"; if (p.rank==null) p.rank = ranked().length+1; logp(p,"Pasa a Oferta"); }
+    if (next === "descartada"){ p.status = "descartada"; p.rank = null; p.choiceNote = v.result.note; logp(p,"Descartada después de la visita"); renumber(); }
+    closeDlg(); commit("Resultado guardado"); return;
+  }
+  if (kind === "client"){
+    const id = f.dataset.id;
+    const slots = UI.tmpSlots.filter(s=>s.days.length && s.from < s.to);
+    const data = {name:val("#c-name"), email:val("#c-email"), notes:val("#c-notes"), slots};
+    if (id){ const c = o.clients.find(c=>c.id===id); const oldName = c.name; Object.assign(c, data); if (S.session.role==="cliente" && S.session.clientId===id) S.session.name = c.name; else if (S.session.role==="cliente" && S.session.name===oldName) S.session.name = c.name; }
+    else o.clients.push(Object.assign({id:uid("c")}, data));
+    closeDlg(); commit("Disponibilidad guardada"); return;
+  }
+  if (kind === "first-op"){
+    const cn = val("#fo-client");
+    const nop = {id:uid("op"), name:val("#fo-name"), created:ymd(today()), clients: cn ? [{id:uid("c"), name:cn, email:"", slots:[], notes:""}] : [], props:[], visits:[], notices:[]};
+    S.ops.push(nop); S.currentOp = nop.id; UI.view = "propiedades"; UI.weekStart = null; if (UI.server===true){ SRV.opId = nop.id; saveSrv(); }
+    commit("Operación creada. Empezá pegando el link de una propiedad"); return;
+  }
+  if (kind === "new-op"){
+    const n = val("#t-val"); const nop = {id:uid("op"), name:n, created:ymd(today()), clients:[], props:[], visits:[], notices:[]};
+    S.ops.push(nop); S.currentOp = nop.id; UI.view = "operacion"; UI.weekStart = null; UI.team = null; if (UI.server===true){ SRV.opId = nop.id; saveSrv(); } closeDlg(); commit(UI.server===true ? "Operación creada. Invitá a tus clientes desde acá" : "Operación creada. Copiá el link para el cliente"); return;
+  }
+  if (kind === "rename-op"){ o.name = val("#t-val"); closeDlg(); commit("Nombre actualizado"); return; }
+});
+
+window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if ((NAV.some(n=>n.id===h) || (h==="brokers" && isSuper())) && h!==UI.view){ UI.view = h; render(); } });
+(function init(){
+  const h = (location.hash||"").slice(1); if (NAV.some(n=>n.id===h) || h==="brokers") UI.view = h;
+  try { const q = new URLSearchParams(location.search).get("op"); if (q && S.ops.some(o=>o.id===q)){ S.currentOp = q; if (!S.session) UI.loginRole = "cliente"; } } catch(e){}
+  UI.booting = /^https?:$/.test(location.protocol);
+  render();
+  detectServer();
+})();
+/* =====================================================================
+   MODO SERVIDOR (Netlify): cuentas de Google, ambientes, invitaciones y
+   sincronización. En Claude (sin servidor) la app sigue en modo de prueba.
+   ===================================================================== */
+const SRV_KEY = "visitas-srv-v1";
+let SRV = (() => { try { return JSON.parse(localStorage.getItem(SRV_KEY)) || {}; } catch(e){ return {}; } })();
+function saveSrv(){ try { localStorage.setItem(SRV_KEY, JSON.stringify(SRV)); } catch(e){} }
+const SYNC = { snap:{}, timer:null, busy:false, again:false, state:"ok", poll:null };
+
+class ApiError extends Error { constructor(status, data){ super((data && data.message) || "No se pudo conectar con el servidor."); this.status = status; this.data = data || {}; } }
+async function api(path, opts = {}){
+  const headers = Object.assign({}, opts.headers || {});
+  if (SRV.token) headers.authorization = "Bearer " + SRV.token;
+  let body = opts.body;
+  if (body && !(body instanceof Blob) && typeof body !== "string"){ body = JSON.stringify(body); headers["content-type"] = "application/json"; }
+  let r;
+  try { r = await fetch("/api" + path, { method: opts.method || "GET", headers, body }); }
+  catch(e){ throw new ApiError(0, {message:"Sin conexión. Revisá internet y probá de nuevo."}); }
+  let data = null; try { data = await r.json(); } catch(e){}
+  if (!r.ok){
+    if (r.status === 401 && path !== "/session"){ srvLogout(true); }
+    throw new ApiError(r.status, data);
+  }
+  return data;
+}
+
+async function detectServer(){
+  if (!/^https?:$/.test(location.protocol)){ UI.server = false; UI.booting = false; render(); return; }
+  let cfg = null;
+  try {
+    const r = await fetch("/api/config", {signal: AbortSignal.timeout(6000)});
+    if ((r.headers.get("content-type")||"").includes("json")) cfg = await r.json();
+  } catch(e){}
+  UI.booting = false;
+  if (!cfg || !cfg.server){ UI.server = false; render(); return; }
+  UI.server = true; UI.cfg = cfg;
+  S = { session:null, currentOp:null, ops:[] };
+  UI.view = NAV.some(n=>n.id===UI.view) ? UI.view : "propiedades";
+  const params = new URLSearchParams(location.search);
+  const inv = params.get("invite");
+  if (inv){ UI.inviteToken = inv; try { UI.inviteInfo = (await api("/invites/" + encodeURIComponent(inv))).invite; } catch(e){ UI.inviteError = e.message; } }
+  if (SRV.token) { await bootServer(); } else render();
+}
+
+/* ---------- ingreso con Google ---------- */
+let gsiPromise = null;
+function loadGsi(){
+  if (window.google && google.accounts && google.accounts.id) return Promise.resolve();
+  if (!gsiPromise) gsiPromise = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://accounts.google.com/gsi/client"; sc.async = true; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+  return gsiPromise;
+}
+async function mountGoogle(){
+  const el = document.getElementById("gsi"); if (!el || !UI.cfg || !UI.cfg.googleClientId) return;
+  try {
+    await loadGsi();
+    google.accounts.id.initialize({ client_id: UI.cfg.googleClientId, callback: onGoogleCredential, auto_select: false, ux_mode: "popup" });
+    const target = document.getElementById("gsi"); if (!target) return;
+    google.accounts.id.renderButton(target, { theme:"outline", size:"large", shape:"pill", text:"continue_with", locale:"es", width: Math.min(360, target.clientWidth || 320) });
+  } catch(e){ const m = document.getElementById("gsi-msg"); if (m) m.textContent = "No se pudo cargar el ingreso de Google. Revisá tu conexión o desactivá bloqueadores."; }
+}
+async function onGoogleCredential(resp){
+  const m = document.getElementById("gsi-msg"); if (m){ m.style.color = "var(--ink-2)"; m.textContent = "Ingresando…"; }
+  try {
+    const d = await api("/session", { method:"POST", body:{ credential: resp.credential } });
+    SRV.token = d.token; saveSrv();
+    await bootServer();
+  } catch(e){ const m2 = document.getElementById("gsi-msg"); if (m2){ m2.style.color = "var(--red)"; m2.textContent = e.message; } }
+}
+window.__visitasLogin = (credential) => onGoogleCredential({ credential }); // usado en pruebas automáticas
+
+function srvLoginHTML(){
+  const cfg = UI.cfg || {}, ready = cfg.ready || {};
+  const inv = UI.inviteInfo;
+  const ROLE_TXT = { broker:"como broker, con tu propio ambiente", asistente:"como asistente", cliente:"a la búsqueda" };
+  let invHTML = "";
+  if (UI.inviteError) invHTML = `<div class="note" style="background:var(--red-soft)"><span class="ms" style="color:var(--red)">link_off</span>${esc(UI.inviteError)}</div>`;
+  else if (inv && inv.status !== "pendiente") invHTML = `<div class="note" style="background:var(--amber-soft)"><span class="ms" style="color:var(--amber)">link_off</span>Esta invitación está ${esc(inv.status)}. Si ya la usaste, ingresá con la misma cuenta de Google. Si no, pedí un link nuevo.</div>`;
+  else if (inv) invHTML = `<div class="invite-card"><span class="avatar av-${inv.type}"><span class="ms fill" style="font-size:18px">${ROLES[inv.type].icon}</span></span><div><b>${esc(inv.inviterName || "Te invitaron")}</b> te invitó ${inv.type==="cliente" ? `a la búsqueda <b>${esc(inv.opName || "")}</b> de` : ROLE_TXT[inv.type] + " en"} <b>${esc(inv.envName || "")}</b>.<small>Ingresá con tu cuenta de Google para aceptar. Vas a quedar asociado con esa cuenta.</small></div></div>`;
+  const missing = [!ready.google && "GOOGLE_CLIENT_ID", !ready.secret && "AUTH_SECRET", !ready.superuser && "SUPERUSER_EMAILS"].filter(Boolean);
+  return `<div class="login"><div class="login-card">
+    <div class="logo"><span class="ms fill">holiday_village</span></div>
+    <div><h1 style="font-size:30px">Visitas Inmobiliarias</h1><p style="margin-top:6px">Coordiná propiedades, visitas y ofertas entre broker, asistente y clientes.</p></div>
+    ${invHTML}
+    ${missing.length ? `<div class="note" style="background:var(--amber-soft)"><span class="ms" style="color:var(--amber)">settings</span>Falta configurar en Netlify: ${missing.join(", ")}. Mirá el README.</div>` : ""}
+    <div id="gsi" class="gsi-box"></div>
+    <div id="gsi-msg" class="found" style="justify-content:center;color:var(--red)"></div>
+    <p style="font-size:12px;color:var(--ink-3);text-align:center">${inv ? "" : "Para entrar necesitás un link de invitación de tu broker o del administrador."}</p>
+  </div></div>`;
+}
+function noAccessHTML(){
+  return `<div class="login"><div class="login-card">
+    <div class="logo" style="background:var(--surface-3);color:var(--ink-2)"><span class="ms">lock</span></div>
+    <div><h1 style="font-size:26px">Tu cuenta todavía no tiene acceso</h1><p style="margin-top:6px">Ingresaste como <b>${esc(S.session.email)}</b>. Para usar la app necesitás el link de invitación que te comparte tu broker, su asistente o el administrador.</p></div>
+    <button class="btn btn-outline" data-action="logout" style="height:44px"><span class="ms">logout</span>Ingresar con otra cuenta</button>
+  </div></div>`;
+}
+
+/* ---------- arranque y ambientes ---------- */
+async function bootServer(){
+  try {
+    if (UI.inviteToken && UI.inviteInfo && (UI.inviteInfo.status === "pendiente" || UI.inviteInfo.status === "usada")){
+      try {
+        const r = await api(`/invites/${encodeURIComponent(UI.inviteToken)}/accept`, { method:"POST" });
+        SRV.envId = r.envId; if (r.opId) SRV.opId = r.opId; saveSrv();
+        UI.welcome = r.already ? null : r.role;
+      } catch(e){ snack(e.message); }
+      UI.inviteToken = null; UI.inviteInfo = null;
+      try { history.replaceState(null, "", location.pathname + location.hash); } catch(e){}
+    }
+    const me = await api("/me");
+    UI.me = me;
+    const base = { name: me.user.name, email: me.user.email, super: !!me.user.super, superName: me.user.name };
+    if (me.user.super && !SRV.envId){ S.session = Object.assign({ role:"broker" }, base); S.ops = []; UI.env = null; UI.view = "brokers"; render(); return; }
+    let envId = SRV.envId && (me.user.super || me.envs.some(e=>e.envId===SRV.envId)) ? SRV.envId : (me.envs[0] && me.envs[0].envId);
+    if (!envId){
+      if (me.user.super){ S.session = Object.assign({ role:"broker" }, base); UI.view = "brokers"; render(); return; }
+      S.session = Object.assign({ role:"cliente", noAccess:true }, base); render(); return;
+    }
+    S.session = Object.assign({ role:"cliente" }, base);
+    await loadEnv(envId);
+    if (UI.welcome){ snack(UI.welcome==="broker" ? "¡Listo! Ya tenés tu ambiente. Creá tu primera operación." : UI.welcome==="asistente" ? "¡Listo! Ya sos asistente en " + (UI.env ? UI.env.name : "el ambiente") : "¡Listo! Ya podés ver las propiedades de tu búsqueda."); UI.welcome = null; }
+  } catch(e){
+    if (e.status !== 401){ S.session = null; render(); snack(e.message); }
+  }
+}
+async function loadEnv(envId, keepRole){
+  const d = await api(`/env/${encodeURIComponent(envId)}`);
+  UI.env = d.env; UI.envRole = d.role; UI.team = null;
+  S.ops = d.ops;
+  SYNC.snap = {}; d.ops.forEach(o => SYNC.snap[o.id] = snapOf(o));
+  const role = (S.session.super && keepRole) ? S.session.role : d.role;
+  S.session = Object.assign({}, S.session, { role, envId, noAccess:false });
+  S.currentOp = d.ops.some(o=>o.id===SRV.opId) ? SRV.opId : (d.ops[0] && d.ops[0].id) || null;
+  SRV.envId = envId; SRV.opId = S.currentOp; saveSrv();
+  if (UI.view === "brokers") UI.view = "propiedades";
+  render(); maybeAskPrefs(); startPolling();
+}
+function syncClientId(){
+  if (!S.session || S.session.role !== "cliente") return;
+  const o = op(); if (!o) return;
+  const c = (o.clients||[]).find(c=>c.email && c.email === S.session.email) || (S.session.super ? o.clients[0] : null);
+  S.session.clientId = c ? c.id : null;
+}
+function maybeAskPrefs(){
+  if (!S.session || S.session.role !== "cliente" || S.session.super) return;
+  const o = op(); if (!o) return;
+  const c = (o.clients||[]).find(c=>c.email === S.session.email);
+  const key = o.id + ":" + S.session.email;
+  if (c && !(c.slots||[]).length && !(UI.prefsAsked||{})[key]){
+    UI.prefsAsked = Object.assign(UI.prefsAsked||{}, {[key]:true});
+    clientForm(c);
+    const h = dlg.querySelector(".dlg-head h2"); if (h) h.textContent = "¿Cuándo podés visitar propiedades?";
+  }
+}
+function srvLogout(expired){
+  clearInterval(SYNC.poll); SYNC.poll = null;
+  SRV = {}; saveSrv();
+  S = { session:null, currentOp:null, ops:[] }; UI.env = null; UI.me = null; UI.team = null; UI.admin = null;
+  try { google.accounts.id.disableAutoSelect(); } catch(e){}
+  if (dlg.open) dlg.close();
+  render();
+  if (expired) snack("Tu sesión venció. Ingresá de nuevo con Google.");
+}
+
+/* ---------- sincronización ---------- */
+function snapOf(o){ const c = Object.assign({}, o); delete c._v; delete c.updatedAt; delete c.updatedBy; return JSON.stringify(c); }
+function syncLabel(){ return SYNC.state === "saving" ? '<span class="ms spin" style="font-size:16px">progress_activity</span>Guardando' : SYNC.state === "error" ? '<span class="ms" style="font-size:16px">cloud_off</span>Sin guardar' : '<span class="ms" style="font-size:16px">cloud_done</span>Guardado'; }
+function setSync(st){ SYNC.state = st; const el = document.getElementById("sync"); if (el){ el.innerHTML = syncLabel(); el.dataset.state = st; } }
+function dirtyOps(){ return S.ops.filter(o => SYNC.snap[o.id] !== snapOf(o)); }
+function scheduleSync(){ setSync("saving"); clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncNow, 350); }
+async function syncNow(){
+  if (SYNC.busy){ SYNC.again = true; return; }
+  if (!S.session || !S.session.envId){ setSync("ok"); return; }
+  SYNC.busy = true; let failed = false, needRender = false;
+  try {
+    for (const o of dirtyOps()){
+      const sent = snapOf(o);
+      try {
+        const r = await api(`/env/${encodeURIComponent(S.session.envId)}/ops/${encodeURIComponent(o.id)}`, { method:"PUT", body:{ op:o, baseV:o._v || 0 } });
+        const i = S.ops.findIndex(x=>x.id===o.id); if (i < 0) continue;
+        if (snapOf(S.ops[i]) === sent){
+          if (snapOf(r.op) !== sent) needRender = true;
+          S.ops[i] = r.op; SYNC.snap[o.id] = snapOf(r.op);
+        } else { S.ops[i]._v = r.op._v; SYNC.snap[o.id] = sent; SYNC.again = true; }
+      } catch(e){
+        if (e.status === 409 && e.data.op){
+          const i = S.ops.findIndex(x=>x.id===o.id); if (i >= 0) S.ops[i] = e.data.op;
+          SYNC.snap[o.id] = snapOf(e.data.op); needRender = true; snack(e.message);
+        } else if (e.status === 403 || e.status === 400 || e.status === 413){
+          snack(e.message); failed = true; await refreshEnv(true);
+        } else { failed = true; if (e.status) snack(e.message); }
+      }
+    }
+  } finally {
+    SYNC.busy = false;
+    setSync(failed ? "error" : dirtyOps().length ? "saving" : "ok");
+    if (needRender) render();
+    if (SYNC.again){ SYNC.again = false; scheduleSync(); }
+    else if (failed){ clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncNow, 8000); }
+  }
+}
+async function refreshEnv(force){
+  if (!S.session || !S.session.envId || SYNC.busy) return;
+  if (!force && dirtyOps().length) return;
+  let d; try { d = await api(`/env/${encodeURIComponent(S.session.envId)}`); } catch(e){ return; }
+  let changed = false;
+  const ids = new Set(d.ops.map(o=>o.id));
+  for (const so of d.ops){
+    const i = S.ops.findIndex(x=>x.id===so.id);
+    const dirty = i >= 0 && SYNC.snap[so.id] !== snapOf(S.ops[i]);
+    if (i < 0){ S.ops.push(so); SYNC.snap[so.id] = snapOf(so); changed = true; }
+    else if ((S.ops[i]._v||0) !== (so._v||0) && (!dirty || force)){ S.ops[i] = so; SYNC.snap[so.id] = snapOf(so); changed = true; }
+  }
+  const before = S.ops.length; S.ops = S.ops.filter(o => ids.has(o.id) || SYNC.snap[o.id] === undefined); if (S.ops.length !== before) changed = true;
+  if (!op() && S.ops[0]) S.currentOp = S.ops[0].id;
+  if (changed && !(dlg.open && dlg.querySelector("form"))) render();
+}
+function startPolling(){
+  clearInterval(SYNC.poll);
+  SYNC.poll = setInterval(() => { if (document.visibilityState === "visible") refreshEnv(false); }, 20000);
+}
+document.addEventListener("visibilitychange", () => { if (UI.server === true && document.visibilityState === "visible") refreshEnv(false); });
+
+async function uploadPhoto(dataUrl){
+  const blob = await (await fetch(dataUrl)).blob();
+  const r = await api(`/env/${encodeURIComponent(S.session.envId)}/photos`, { method:"POST", body:blob, headers:{ "content-type": blob.type || "image/jpeg" } });
+  return r.url;
+}
+
+/* ---------- invitaciones y equipo ---------- */
+const inviteUrl = (token) => location.origin + "/?invite=" + encodeURIComponent(token);
+function inviteDlg(kind, preset){
+  const o = op();
+  const titles = { broker:"Invitar broker", asistente:"Invitar asistente", cliente: isStaff() ? "Invitar cliente" : "Invitar a otra persona a tu búsqueda" };
+  const sub = { broker:"Va a tener su propio ambiente, donde es el administrador.", asistente:"Va a trabajar solo en las operaciones que le asignes.", cliente: `Va a ver la búsqueda <b>${esc(o ? o.name : "")}</b> con los mismos permisos que ${isStaff() ? "el cliente" : "vos"}.` };
+  openDlg(`<form class="dlg" data-form="invite" data-kind="${kind}">${head(titles[kind])}<div class="dlg-body">
+    <p style="margin:0 0 14px;color:var(--ink-2)">${sub[kind]} Le vas a compartir un link para que ingrese con su cuenta de Google.</p>
+    <div class="form">
+      <div class="field"><label for="in-name">Nombre</label><input id="in-name" required autofocus placeholder="${kind==="broker"?"Ej.: Lucía Paz":kind==="asistente"?"Ej.: Tomás Gil":"Ej.: Carolina"}"></div>
+      ${kind==="broker" ? `<div class="field"><label for="in-env">Nombre del ambiente (inmobiliaria)</label><input id="in-env" placeholder="Ej.: Paz Propiedades"></div>` : ""}
+      ${kind==="asistente" ? `<div class="field"><label>Operaciones que va a ver</label><div class="checks">${S.ops.map(x=>`<label class="check"><input type="checkbox" name="in-ops" value="${x.id}" ${(preset||[]).includes(x.id)?"checked":""}> ${esc(x.name)}</label>`).join("") || '<small style="color:var(--ink-3)">Todavía no hay operaciones. Podés asignarlas después.</small>'}</div></div>` : ""}
+    </div>
+    <div id="in-msg" class="found" style="color:var(--red)"></div>
+  </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit"><span class="ms">link</span>Crear link</button></div></form>`);
+}
+function showInviteLink(inv){
+  const url = inviteUrl(inv.token);
+  const who = inv.name ? inv.name + ", t" : "T";
+  const msg = inv.type === "cliente"
+    ? `Hola ${inv.name||""}! Te comparto tu búsqueda de propiedades en ${inv.envName}. Entrá con tu cuenta de Google desde este link: ${url}`
+    : `${who}e invito a ${inv.envName} en Visitas Inmobiliarias como ${ROLES[inv.type].label.toLowerCase()}. Entrá con tu cuenta de Google desde este link: ${url}`;
+  openDlg(`<div class="dlg">${head("Link de invitación")}<div class="dlg-body">
+    <p style="margin:0;color:var(--ink-2)">Compartile este link a <b>${esc(inv.name || "la persona invitada")}</b>. Sirve para una sola cuenta de Google y vence en 14 días.</p>
+    <div class="linkbox"><code id="inv-url">${esc(url)}</code><button class="btn btn-tonal btn-sm" data-action="copy-text" data-text="${esc(url)}"><span class="ms">content_copy</span>Copiar</button></div>
+    <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" style="align-self:flex-start"><span class="ms" style="color:#1DA851">chat</span>Enviar por WhatsApp</a>
+  </div><div class="dlg-foot"><button class="btn btn-filled" data-action="close">Listo</button></div></div>`);
+}
+async function loadTeam(){
+  if (!S.session || !S.session.envId) return;
+  try { UI.team = await api(`/env/${encodeURIComponent(S.session.envId)}/team`); }
+  catch(e){ UI.team = { error: e.message, members:[], invites:[] }; }
+  if (UI.view === "operacion") render();
+}
+function srvOpPanelsHTML(o){
+  if (!UI.team){ loadTeam(); UI.team = { loading:true, members:[], invites:[] }; }
+  const T = UI.team, staff = isStaff(), broker = isBroker();
+  const fmtD = (t) => { const d = new Date(t); return d.getDate()+" "+MONTHS[d.getMonth()]; };
+  const invRow = (i) => `<div class="client-row"><span class="avatar av-${i.type}" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div class="info"><b>${esc(i.name || "Sin nombre")}</b><small>${ROLES[i.type].label} · invitación pendiente · vence ${fmtD(i.expires)}</small></div><button class="icon-btn" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}" title="Copiar link" aria-label="Copiar link"><span class="ms">content_copy</span></button><button class="icon-btn" data-action="revoke-invite" data-id="${esc(i.token)}" title="Anular invitación" aria-label="Anular invitación"><span class="ms">link_off</span></button></div>`;
+  const opInvites = T.invites.filter(i => i.type==="cliente" && (i.opIds||[]).includes(o.id));
+  const opClients = T.members.filter(m => m.role==="cliente" && (m.opIds||[]).includes(o.id));
+  const access = `<section class="panel"><h2>${staff ? "Clientes con acceso" : "Personas en tu búsqueda"}</h2><p class="hint">${staff ? "Cada cliente entra con su cuenta de Google y ve solo esta operación." : "Pueden ver y opinar sobre las mismas propiedades que vos."}</p>
+    ${T.loading ? '<small style="color:var(--ink-3)">Cargando…</small>' : ""}
+    ${opClients.map(m=>`<div class="client-row"><span class="avatar av-cliente">${esc(initials(m.name))}</span><div class="info"><b>${esc(m.name)}</b><small>${esc(m.email)}</small></div>${broker?`<button class="icon-btn" data-action="remove-member" data-id="${esc(m.email)}" title="Quitar acceso" aria-label="Quitar acceso"><span class="ms">person_remove</span></button>`:""}</div>`).join("")}
+    ${opInvites.map(invRow).join("")}
+    ${!T.loading && !opClients.length && !opInvites.length ? '<small style="color:var(--ink-3)">Todavía nadie tiene acceso a esta búsqueda.</small>' : ""}
+    <button class="btn btn-tonal" data-action="invite" data-kind="cliente" style="margin-top:12px"><span class="ms">person_add</span>${staff ? "Invitar cliente" : "Invitar a otra persona"}</button></section>`;
+  if (!broker) return access;
+  const asis = T.members.filter(m => m.role==="asistente");
+  const asisInv = T.invites.filter(i => i.type==="asistente");
+  const team = `<section class="panel"><h2>Asistentes</h2><p class="hint">Cada asistente ve solo las operaciones que le asignes.</p>
+    ${asis.map(m=>`<div class="client-row" style="flex-wrap:wrap"><span class="avatar av-asistente">${esc(initials(m.name))}</span><div class="info"><b>${esc(m.name)}</b><small>${esc(m.email)}</small>
+      <div class="checks" style="margin-top:6px">${S.ops.map(x=>`<label class="check" style="font-size:13px"><input type="checkbox" data-assign="${esc(m.email)}" value="${x.id}" ${(m.opIds||[]).includes(x.id)?"checked":""}> ${esc(x.name)}</label>`).join("")}</div></div>
+      <button class="icon-btn" data-action="remove-member" data-id="${esc(m.email)}" title="Quitar asistente" aria-label="Quitar asistente"><span class="ms">person_remove</span></button></div>`).join("")}
+    ${asisInv.map(invRow).join("")}
+    ${!T.loading && !asis.length && !asisInv.length ? '<small style="color:var(--ink-3)">Todavía no tenés asistentes.</small>' : ""}
+    <button class="btn btn-tonal" data-action="invite" data-kind="asistente" style="margin-top:12px"><span class="ms">person_add</span>Invitar asistente</button></section>`;
+  return access + team;
+}
+
+/* ---------- panel de superusuario ---------- */
+async function loadAdmin(){
+  try { UI.admin = await api("/admin/envs"); } catch(e){ UI.admin = { error:e.message, envs:[], invites:[] }; }
+  if (UI.view === "brokers") render();
+}
+function brokersHTML(){
+  if (!UI.admin){ loadAdmin(); UI.admin = { loading:true, envs:[], invites:[] }; }
+  const A = UI.admin;
+  const fmtD = (t) => { const d = new Date(t); return d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear(); };
+  return `
+  <div class="page-head"><div><h1>Brokers</h1><div class="sub">Cada broker tiene su propio ambiente, donde administra asistentes, clientes y operaciones.</div></div>
+    <div class="actions"><button class="btn btn-filled" data-action="invite" data-kind="broker"><span class="ms">person_add</span>Invitar broker</button></div></div>
+  ${A.error ? `<div class="note" style="background:var(--red-soft)"><span class="ms" style="color:var(--red)">error</span>${esc(A.error)}</div>` : ""}
+  <div class="summary">
+    <div class="stat"><b>${A.envs.length}</b><span>Ambientes</span></div>
+    <div class="stat"><b>${A.envs.filter(e=>e.active).length}</b><span>Activos</span></div>
+    <div class="stat ${A.invites.length?"alert":""}"><b>${A.invites.length}</b><span>Invitaciones pendientes</span></div>
+    <div class="stat"><b>${A.envs.reduce((n,e)=>n+e.ops,0)}</b><span>Operaciones en total</span></div>
+  </div>
+  ${A.invites.length ? `<div class="section-title" style="margin-top:0"><h2>Invitaciones pendientes</h2></div><div class="stack" style="margin-bottom:22px">${A.invites.map(i=>`<div class="panel" style="display:flex;gap:12px;align-items:center;padding:14px 18px"><span class="avatar av-broker" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div style="flex:1;min-width:0"><b>${esc(i.name||"Sin nombre")}</b> · ${esc(i.envName)}<br><small style="color:var(--ink-3)">Vence el ${fmtD(i.expires)}</small></div><button class="btn btn-tonal btn-sm" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}"><span class="ms">content_copy</span>Copiar link</button><button class="btn btn-text btn-sm" data-action="revoke-invite" data-id="${esc(i.token)}">Anular</button></div>`).join("")}</div>` : ""}
+  <div class="section-title" style="margin-top:0"><h2>Ambientes</h2><span class="count num">${A.envs.length}</span></div>
+  ${A.loading ? '<div class="empty">Cargando…</div>' : A.envs.length ? `<div class="grid">${A.envs.map(e=>`<article class="panel env-card ${e.active?"":"off"}">
+      <div style="display:flex;gap:10px;align-items:center"><span class="avatar av-broker">${esc(initials(e.brokerName))}</span><div style="min-width:0"><h3>${esc(e.name)}</h3><small style="color:var(--ink-3)">${esc(e.brokerName)} · ${esc(e.brokerEmail)}</small></div></div>
+      <dl class="kv" style="margin:12px 0;font-size:13px"><dt>Operaciones</dt><dd>${e.ops}</dd><dt>Asistentes</dt><dd>${e.asistentes}</dd><dt>Clientes</dt><dd>${e.clientes}</dd><dt>Desde</dt><dd>${fmtD(e.created)}</dd></dl>
+      ${e.active ? "" : '<span class="status s-rechazada" style="margin-bottom:10px">Desactivado</span>'}
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-filled btn-sm" data-action="enter-env" data-id="${e.id}"><span class="ms">login</span>Entrar</button><button class="btn btn-text btn-sm" data-action="toggle-env" data-id="${e.id}" data-active="${e.active}">${e.active ? "Desactivar" : "Activar"}</button></div>
+    </article>`).join("")}</div>` : `<div class="empty"><span class="ms">apartment</span>Todavía no hay brokers. Invitá al primero.</div>`}`;
+}
+
+})();
+</script>
+</body>
+</html>
