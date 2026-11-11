@@ -63,10 +63,10 @@ Para revisar la configuración: `https://TU-SITIO.netlify.app/api/config` tiene 
 
 Cada portal tiene su propia lectura (`netlify/functions/leer-aviso.mjs`):
 
-- **Mercado Libre**: API oficial (con `ML_CLIENT_ID`/`ML_CLIENT_SECRET`) o la página pública.
-- **RE/MAX**: API pública del sitio (`api-ar.redremax.com/.../listings/findBySlug`). Trae precio, expensas, m², ambientes, baños, cocheras, pisos, dirección, barrio, teléfono del agente y fotos en alta. Si la API no responde, lee la página.
-- **Argenprop**: precio, lista de características ("Cant. Ambientes", "Sup. Total", "Cant. Cocheras", "Expensas"), dirección y la galería completa de fotos (`/aviso/gallerypartial`), descartando las de avisos similares.
-- **Zonaprop**: variables internas de la página (`mainFeatures`, `pricesData`, `expenses`, `address`, `location`, `pictures`, `whatsApp`). Zonaprop suele bloquear servidores: si pasa, configurá `SCRAPINGBEE_API_KEY` o pegá el texto del aviso.
+- **Mercado Libre**: API oficial (con `ML_CLIENT_ID`/`ML_CLIENT_SECRET`) o la página pública. Título, precio, expensas, m² totales y cubiertos, ambientes, baños, cocheras, piso, pisos, balcón, dirección («Zapiola 2100, Capital Federal») y localidad («Belgrano R, Capital Federal»).
+- **RE/MAX**: API pública del sitio (`api-ar.redremax.com/.../listings/findBySlug`). Precio, expensas, m² totales y cubiertos, ambientes, baños, cocheras, piso (de la descripción), pisos, balcón, dirección, localidad, teléfono del agente y fotos. Las fotos de RE/MAX solo cargan sin encabezado «Referer», por eso todas las imágenes de la app usan `referrerpolicy="no-referrer"`.
+- **Argenprop**: título («Quesada 2800 Venta en Belgrano, CABA»), dirección completa, localidad, precio, expensas, características («Cant. Ambientes», «Sup. Total», «Sup. Cubierta», «Tipo de Balcón», «Cant. Pisos») y la galería completa (`/aviso/gallerypartial`).
+- **Zonaprop y otras inmobiliarias**: no se leen. Se guarda solo el link y, al tocar la tarjeta, se abre el aviso original en una pestaña nueva. Se pueden completar datos a mano (y con el favorito, desde el navegador, Zonaprop todavía se puede traer).
 
 Si un aviso no se lee bien, en la app tocá **¿Faltan datos? Copiar diagnóstico** y pasáselo a quien mantenga la app.
 
