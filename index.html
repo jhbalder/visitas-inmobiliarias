@@ -674,6 +674,7 @@ function render(){
   if (UI.server === true){
     if (!S.session){ root.innerHTML = srvLoginHTML(); mountGoogle(); return; }
     if (S.session.noAccess){ root.innerHTML = noAccessHTML(); return; }
+    if (S.session.loadError){ root.innerHTML = loadErrorHTML(); return; }
     syncClientId();
     // Sin ambiente no hay operaciones: se ofrece crear (o elegir) un ambiente.
     if (!S.session.envId && UI.view !== "brokers"){ root.innerHTML = noEnvHTML(); const f = root.querySelector("[autofocus]"); if (f) f.focus(); return; }
@@ -1676,6 +1677,14 @@ document.addEventListener("click", async e => {
       try { await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(id)}`, {method:"DELETE"}); closeDlg(); snack("Acceso quitado"); } catch(err){ snack(err.message); }
       loadTeam(); break;
     }
+    case "pi-no": UI.pendingInvite = null; closeDlg(); snack("Listo, no se aceptó. La invitación sigue pendiente para la otra persona."); break;
+    case "pi-copy": { const pi = UI.pendingInvite; if (pi) { try { await navigator.clipboard.writeText(inviteUrl(pi.token)); snack("Link copiado"); } catch(err){ snack("No se pudo copiar"); } } break; }
+    case "pi-yes": {
+      const pi = UI.pendingInvite; if (!pi) break; UI.pendingInvite = null; closeDlg();
+      try { const r = await api(`/invites/${encodeURIComponent(pi.token)}/accept`, { method:"POST" }); UI.me = await api("/me"); await loadEnv(r.envId); snack("Invitación aceptada"); } catch(err){ snack(err.message); }
+      break;
+    }
+    case "retry-boot": S.session = null; render(); bootServer(); break;
     case "admin-cancel": UI.adminLogin = false; render(); break;
     case "logout": if (UI.server === true){ closeMenu(); srvLogout(); break; }
       closeMenu(); S.session = null; UI.loginRole = "broker"; commit(); break;
@@ -1900,11 +1909,13 @@ window.addEventListener("hashchange", () => { if (/^#importar=/.test(location.ha
    sincronización. En Claude (sin servidor) la app sigue en modo de prueba.
    ===================================================================== */
 const SRV_KEY = "visitas-srv-v1";
-let SRV = (() => { try { return JSON.parse(localStorage.getItem(SRV_KEY)) || {}; } catch(e){ return {}; } })();
-function saveSrv(){ try { localStorage.setItem(SRV_KEY, JSON.stringify(SRV)); } catch(e){} }
+// Cada pestaña guarda su propia sesión: se puede tener el superusuario en una pestaña y otra cuenta en otra
+// sin que una pise a la otra. Una pestaña nueva arranca con la última sesión usada.
+let SRV = (() => { try { return JSON.parse(sessionStorage.getItem(SRV_KEY) || localStorage.getItem(SRV_KEY)) || {}; } catch(e){ return {}; } })();
+function saveSrv(){ const v = JSON.stringify(SRV); try { sessionStorage.setItem(SRV_KEY, v); } catch(e){} try { if (SRV.token) localStorage.setItem(SRV_KEY, v); } catch(e){} }
 const SYNC = { snap:{}, timer:null, busy:false, again:false, state:"ok", poll:null };
 
-class ApiError extends Error { constructor(status, data){ super((data && data.message) || "No se pudo conectar con el servidor."); this.status = status; this.data = data || {}; } }
+class ApiError extends Error { constructor(status, data){ super(((data && data.message) || "No se pudo conectar con el servidor.") + (data && data.detail ? " Detalle técnico: " + data.detail : "")); this.status = status; this.data = data || {}; } }
 async function api(path, opts = {}){
   const headers = Object.assign({}, opts.headers || {});
   if (SRV.token) headers.authorization = "Bearer " + SRV.token;
@@ -1959,6 +1970,7 @@ async function onGoogleCredential(resp){
   const m = document.getElementById("gsi-msg"); if (m){ m.style.color = "var(--ink-2)"; m.textContent = "Ingresando…"; }
   try {
     const d = await api("/session", { method:"POST", body:{ credential: resp.credential } });
+    UI.inviteConsent = true; // ingresó desde la pantalla de la invitación: la acepta con esta cuenta
     SRV.token = d.token; saveSrv();
     await bootServer();
   } catch(e){ const m2 = document.getElementById("gsi-msg"); if (m2){ m2.style.color = "var(--red)"; m2.textContent = e.message; } }
@@ -1984,6 +1996,14 @@ function srvLoginHTML(){
     <p style="font-size:12px;color:var(--ink-3);text-align:center">${inv ? "" : "Para entrar necesitás un link de invitación de tu broker o del administrador."}</p>
   </div></div>`;
 }
+function loadErrorHTML(){
+  return `<div class="login"><div class="login-card">
+    <div class="logo" style="background:var(--red-soft);color:var(--red)"><span class="ms">cloud_off</span></div>
+    <div><h1 style="font-size:26px">No se pudo abrir tu búsqueda</h1><p style="margin-top:6px">Ingresaste como <b>${esc(S.session.email)}</b>. ${esc(S.session.loadError)}</p></div>
+    <button class="btn btn-filled" data-action="retry-boot" style="height:44px"><span class="ms">refresh</span>Reintentar</button>
+    <button class="btn btn-text" data-action="logout" style="align-self:center">Ingresar con otra cuenta</button>
+  </div></div>`;
+}
 function noAccessHTML(){
   return `<div class="login"><div class="login-card">
     <div class="logo" style="background:var(--surface-3);color:var(--ink-2)"><span class="ms">lock</span></div>
@@ -1995,13 +2015,19 @@ function noAccessHTML(){
 /* ---------- arranque y ambientes ---------- */
 async function bootServer(){
   try {
+    if (UI.inviteToken && UI.inviteInfo && !UI.inviteConsent && UI.inviteInfo.status === "pendiente"){
+      // Ya había una sesión abierta: no se acepta sola. Se pregunta (después de entrar) si la invitación es para esta cuenta.
+      UI.pendingInvite = { token: UI.inviteToken, info: UI.inviteInfo };
+      UI.inviteToken = null; UI.inviteInfo = null;
+      try { history.replaceState(null, "", location.pathname + location.hash); } catch(e){}
+    }
     if (UI.inviteToken && UI.inviteInfo && (UI.inviteInfo.status === "pendiente" || UI.inviteInfo.status === "usada")){
       try {
         const r = await api(`/invites/${encodeURIComponent(UI.inviteToken)}/accept`, { method:"POST" });
         SRV.envId = r.envId; if (r.opId) SRV.opId = r.opId; saveSrv();
         UI.welcome = r.already ? null : r.role;
       } catch(e){ snack(e.message); }
-      UI.inviteToken = null; UI.inviteInfo = null;
+      UI.inviteToken = null; UI.inviteInfo = null; UI.inviteConsent = false;
       try { history.replaceState(null, "", location.pathname + location.hash); } catch(e){}
     }
     const me = await api("/me");
@@ -2014,11 +2040,23 @@ async function bootServer(){
       S.session = Object.assign({ role:"cliente", noAccess:true }, base); render(); return;
     }
     S.session = Object.assign({ role:"cliente" }, base);
-    await loadEnv(envId);
+    // Si un ambiente no carga, se prueba con los otros; nunca se cierra la sesión por eso.
+    const tryIds = [envId, ...me.envs.map(e=>e.envId).filter(x=>x!==envId)];
+    let loaded = false, lastErr = null;
+    for (const id of tryIds){
+      try { await loadEnv(id); loaded = true; break; }
+      catch(err){ if (err.status === 401) throw err; lastErr = err; SRV.envId = null; saveSrv(); }
+    }
+    if (!loaded){
+      if (me.user.super){ S.session = Object.assign({ role:"broker" }, base); S.ops = []; UI.env = null; UI.view = "brokers"; render(); snack("No se pudo abrir el ambiente: " + lastErr.message); return; }
+      S.session = Object.assign({ role:"cliente", loadError: lastErr ? lastErr.message : "No se pudo abrir el ambiente." }, base); render(); return;
+    }
+    if (lastErr) snack("Uno de tus ambientes no se pudo abrir: " + lastErr.message);
     if (UI.welcome){ snack(UI.welcome==="broker" ? "¡Listo! Ya tenés tu ambiente. Creá tu primera operación." : UI.welcome==="broker_env" ? "¡Listo! Ya sos broker en " + (UI.env ? UI.env.name : "el ambiente") : UI.welcome==="asistente" ? "¡Listo! Ya sos asistente en " + (UI.env ? UI.env.name : "el ambiente") : "¡Listo! Ya podés ver las propiedades de tu búsqueda."); UI.welcome = null; }
   } catch(e){
-    if (e.status !== 401){ S.session = null; render(); snack(e.message); }
+    if (e.status !== 401){ S.session = null; render(); const m = document.getElementById("gsi-msg"); if (m) m.textContent = e.message; else snack(e.message); }
   }
+  if (UI.pendingInvite) setTimeout(askPendingInvite, 300);
 }
 async function loadEnv(envId, keepRole){
   const d = await api(`/env/${encodeURIComponent(envId)}`);
@@ -2032,6 +2070,14 @@ async function loadEnv(envId, keepRole){
   SRV.envId = envId; SRV.opId = S.currentOp; saveSrv();
   if (UI.view === "brokers") UI.view = "propiedades";
   render(); maybeAskPrefs(); startPolling();
+}
+function askPendingInvite(){
+  const pi = UI.pendingInvite; if (!pi || !S.session || dlg.open) return;
+  const i = pi.info, R2 = { broker:"broker con ambiente propio", broker_env:"broker", asistente:"asistente", cliente:"cliente", colaborador:"broker invitado" };
+  openDlg(`<div class="dlg">${head("¿Esta invitación es para vos?")}<div class="dlg-body">
+    <p style="margin:0 0 10px;color:var(--ink-2)">Abriste una invitación como <b>${esc(R2[i.type]||i.type)}</b> en <b>${esc(i.envName||"")}</b>${i.name?` para <b>${esc(i.name)}</b>`:""}.</p>
+    <p style="margin:0;color:var(--ink-2)">Estás conectado como <b>${esc(S.session.email)}</b>. Si es para otra persona, no la aceptes: mandale el link, o abrilo en una ventana de incógnito o en otro navegador para probarlo con otra cuenta. Tu sesión no cambia.</p>
+  </div><div class="dlg-foot"><button class="btn btn-text" data-action="pi-copy">Copiar link</button><button class="btn btn-outline" data-action="pi-no">Es para otra persona</button><button class="btn btn-filled" data-action="pi-yes">Aceptar con mi cuenta</button></div></div>`);
 }
 function syncClientId(){
   if (!S.session || S.session.role !== "cliente") return;
@@ -2052,7 +2098,8 @@ function maybeAskPrefs(){
 }
 function srvLogout(expired){
   clearInterval(SYNC.poll); SYNC.poll = null;
-  SRV = {}; saveSrv();
+  const mine = SRV.token; SRV = {}; saveSrv();
+  try { const last = JSON.parse(localStorage.getItem(SRV_KEY) || "{}"); if (!last.token || last.token === mine) localStorage.removeItem(SRV_KEY); } catch(e){}
   S = { session:null, currentOp:null, ops:[] }; UI.env = null; UI.me = null; UI.team = null; UI.admin = null;
   try { google.accounts.id.disableAutoSelect(); } catch(e){}
   if (dlg.open) dlg.close();
