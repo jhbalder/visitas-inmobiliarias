@@ -48,6 +48,8 @@ export default async (req) => {
       if (c === "members" && d && m === "PUT") return await updateMember(user, b, d, await body(req));
       if (c === "members" && d && m === "DELETE") return await removeMember(user, b, d);
       if (c === "photos" && m === "POST") return await uploadPhoto(user, b, req);
+      if (c === "docs" && d && m === "POST") return await uploadDoc(user, b, d, req);
+      if (c === "docs" && d && parts[4] && m === "GET") return await getDoc(user, b, d, parts[4]);
     }
     if (a === "admin") {
       if (!user.super) fail(403, "solo_admin", "Solo el superusuario puede hacer esto.");
@@ -382,6 +384,31 @@ async function uploadPhoto(user, envId, req) {
   const id = rid(20);
   await db().set(`photos/${envId}/${id}`, buf, { metadata: { type } });
   return json({ url: `/api/photo/${envId}/${id}` });
+}
+/* ---------- documentos (recibos, ofertas firmadas): solo los ve quien tiene acceso a la operación ---------- */
+const MAX_DOC_BYTES = 5 * 1024 * 1024;
+const DOC_TYPES = /^(application\/pdf|image\/(jpeg|png|webp|heic)|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/;
+async function uploadDoc(user, envId, opId, req) {
+  if (!validId(opId)) fail(400, "operacion", "Operación inválida.");
+  const ctx = await envContext(user, envId);
+  if (!isStaffRole(ctx.role)) fail(403, "permiso", "Solo el broker o el asistente suben documentos.");
+  if (!canOp(ctx, opId)) fail(403, "permiso", "No tenés acceso a esta operación.");
+  const type = (req.headers.get("content-type") || "").split(";")[0].trim();
+  if (!DOC_TYPES.test(type)) fail(415, "formato", "El documento tiene que ser PDF, una foto (JPG, PNG) o Word.");
+  const buf = await req.arrayBuffer();
+  if (buf.byteLength > MAX_DOC_BYTES) fail(413, "muy_grande", "El documento pesa más de 5 MB. Escanealo con menos resolución o en PDF.");
+  let name = "documento"; try { name = decodeURIComponent(req.headers.get("x-filename") || "documento").slice(0, 120); } catch {}
+  const id = rid(24);
+  await db().set(`docs/${envId}/${opId}/${id}`, buf, { metadata: { type, name, by: user.email, at: Date.now() } });
+  return json({ url: `/api/env/${envId}/docs/${opId}/${id}`, name, size: buf.byteLength });
+}
+async function getDoc(user, envId, opId, id) {
+  if (!validId(opId) || !validId(id)) fail(400, "documento", "Documento inválido.");
+  const ctx = await envContext(user, envId);
+  if (!canOp(ctx, opId)) fail(403, "permiso", "No tenés acceso a este documento.");
+  const r = await db().getWithMetadata(`docs/${envId}/${opId}/${id}`, { type: "arrayBuffer" });
+  if (!r) fail(404, "documento", "El documento no existe.");
+  return new Response(r.data, { headers: { "content-type": r.metadata?.type || "application/octet-stream", "cache-control": "private, no-store", "content-disposition": `inline; filename="${encodeURIComponent(r.metadata?.name || "documento")}"` } });
 }
 async function getPhoto(envId, id) {
   if (!validId(envId) || !validId(id)) fail(400, "foto", "Foto inválida.");

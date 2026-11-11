@@ -125,6 +125,7 @@ a{color:var(--primary)}
 .s-oferta{background:var(--amber-soft);color:var(--amber)}
 .s-negociacion{background:var(--orange-soft);color:var(--orange)}
 .s-reservada{background:#0A6A3A;color:#fff}
+.s-escritura{background:#123B6D;color:#fff}
 .s-descartada{background:var(--surface-3);color:var(--ink-3)}
 .s-pendiente{background:var(--amber-soft);color:var(--amber)}
 .s-rechazada{background:var(--red-soft);color:var(--red)}
@@ -294,6 +295,12 @@ details.discarded[open] summary .ms{transform:rotate(90deg)}
 .rank-addr{display:block;color:var(--ink-2)!important;line-height:1.3;margin:2px 0}
 .dlg-sub{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:400;color:var(--ink-2);margin-top:4px;letter-spacing:0}.dlg-sub .ms{font-size:17px}
 .bcard .addr-line{display:block;color:var(--ink-2)!important}
+.req{font-size:11px;font-weight:600;color:var(--amber);background:var(--amber-soft);border-radius:8px;padding:1px 6px;margin-left:4px}
+.doc-open{border:0;background:none;padding:0;font:inherit;color:var(--primary);cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px}
+.radio-card{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:16px;border:1px solid var(--surface-3);cursor:pointer}
+.radio-card:has(input:checked){border-color:var(--primary);background:var(--android-soft)}
+.radio-card input{margin-top:3px;accent-color:var(--primary)}
+.radio-card b{display:block;font-size:14px}.radio-card small{color:var(--ink-2);font-size:12.5px}
 .inv-link{display:block;font-size:12px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:6px 8px;margin-top:6px;word-break:break-all;user-select:all}
 .slot-line{display:flex!important;align-items:center;gap:4px}
 .mini-x{border:0;background:none;width:22px;height:22px;border-radius:11px;display:grid;place-items:center;cursor:pointer;color:var(--ink-3);padding:0}
@@ -466,8 +473,8 @@ const ROLES = {
 };
 const ROLE_INFO = Object.assign({}, ROLES, { colaborador:{label:"Broker invitado",icon:"handshake",desc:"Trabaja una operación puntual como broker"}, broker_env:{label:"Broker",icon:"verified_user",desc:"Broker del ambiente"} });
 const STATUS = {
-  nueva:{label:"Nueva"}, leida:{label:"Leída"}, para_agendar:{label:"Para agendar"}, por_visitar:{label:"Por visitar"},
-  oferta:{label:"Oferta"}, negociacion:{label:"En negociación"}, reservada:{label:"Reservada"}, descartada:{label:"Descartada"}
+  nueva:{label:"Nueva", col:"Nuevas"}, leida:{label:"Leída", col:"Leídas"}, para_agendar:{label:"Agendar visita", col:"Agendar visita"}, por_visitar:{label:"Por visitar", col:"Por visitar"},
+  oferta:{label:"Oferta", col:"Oferta"}, negociacion:{label:"En negociación", col:"En negociación"}, reservada:{label:"Reservada", col:"Reservada"}, escritura:{label:"Firma de escritura", col:"Firma de escritura"}, descartada:{label:"Descartada", col:"Descartadas"}
 };
 const STATUS_KEYS = Object.keys(STATUS);
 // El cliente pidió verla («Quiero verla»): recién ahí se puede agendar.
@@ -911,7 +918,7 @@ function placesSuggest(input){
     box.style.top = (input.offsetTop + input.offsetHeight + 4) + "px";
   }, 300);
 }
-document.addEventListener("focusout", e => { if (e.target.id==="f-address" || e.target.id==="v-addr") setTimeout(placesClose, 150); });
+document.addEventListener("focusout", e => { if (["f-address","v-addr","d-deed-addr"].includes(e.target.id)) setTimeout(placesClose, 150); });
 document.addEventListener("keydown", e => { if (e.key==="Escape" && document.querySelector(".places-list")){ e.preventDefault(); e.stopPropagation(); placesClose(); } }, true);
 
 /* ---------- buscador por dirección ---------- */
@@ -1104,17 +1111,18 @@ function pipelineHTML(){
   const staff = isStaff();
   const cols = [];
   if (staff) cols.push({k:"pendiente",label:"Por aprobar",items:o.props.filter(p=>p.approval==="pendiente")});
-  STATUS_KEYS.forEach(k=> cols.push({k, label:STATUS[k].label, items:o.props.filter(p=>p.approval==="aprobada" && p.status===k).sort((a,b)=>(a.rank??99)-(b.rank??99))}));
+  STATUS_KEYS.forEach(k=> cols.push({k, label:STATUS[k].col||STATUS[k].label, items:o.props.filter(p=>p.approval==="aprobada" && p.status===k).sort((a,b)=>(a.rank??99)-(b.rank??99))}));
   const card = p => {
     let extra = "";
     if (p.status==="oferta" || p.status==="negociacion") extra += `<dl class="kv"><dt>Ofrecido</dt><dd>${usd(p.offer.price)}</dd><dt>Depósito</dt><dd>${usd(p.offer.deposit)}</dd>${p.status==="negociacion"?`<dt>Contraoferta</dt><dd>${usd(p.nego.counter)}</dd>`:""}</dl>`;
-    if (p.status==="reservada") extra += `<dl class="kv"><dt>Escritura</dt><dd>${p.reserve.deedDate?fmtDateShort(p.reserve.deedDate):"—"}</dd><dt>Avance</dt><dd>${p.reserve.progress||0}%</dd></dl><div class="progress"><i style="width:${p.reserve.progress||0}%"></i></div>`;
+    if (p.status==="escritura"){ const d = deedOf(p); extra += `<dl class="kv"><dt>Firma</dt><dd>${d.date?fmtDateShort(d.date)+(d.time?" "+d.time:""):"—"}</dd><dt>Lugar</dt><dd>${esc(d.place||d.address||"—")}</dd></dl>`; }
+    if (p.status==="reservada") extra += `<dl class="kv"><dt>Avance</dt><dd>${p.reserve.progress||0}%</dd></dl><div class="progress"><i style="width:${p.reserve.progress||0}%"></i></div>`;
     if (p.status==="descartada" && p.choiceNote) extra += `<small>${esc(p.choiceNote)}</small>`;
-    const docs = (p.offer.docs.length + p.nego.docs.length);
+    const docs = DOC_KINDS.reduce((n,k)=>n+docArr(p,k).length,0);
     return `<button class="bcard" data-action="open" data-id="${p.id}"><div class="top"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small class="addr-line">${esc(addrOf(p))}</small><small style="display:block">${usd(p.price)}</small></div></div>${p.rank&&!["nueva","leida","descartada"].includes(p.status)?`<small>Prioridad #${p.rank}</small>`:""}${extra}${docs?`<small><span class="ms" style="font-size:14px;vertical-align:-2px">attach_file</span> ${docs} ${docs===1?"documento":"documentos"}</small>`:""}</button>`;
   };
   return `
-  <div class="page-head"><div><h1>Seguimiento</h1><div class="sub">Cada propiedad avanza de Nueva a Reservada. ${staff?"Abrí una tarjeta para cargar ofertas, contraofertas, documentos y novedades.":"Acá ves en qué etapa está cada propiedad."}</div></div></div>
+  <div class="page-head"><div><h1>Seguimiento</h1><div class="sub">Cada propiedad avanza de Nueva a Firma de escritura. ${staff?"Abrí una tarjeta para cargar ofertas, contraofertas, documentos y novedades.":"Acá ves en qué etapa está cada propiedad."}</div></div></div>
   <div class="board-scroll"><div class="board">
     ${cols.map(c=>`<section class="bcol"><header><span class="status s-${c.k}">${c.label}</span><span class="n">${c.items.length}</span></header>${c.items.map(card).join("")||`<small style="color:var(--ink-3);padding:4px">Sin propiedades</small>`}</section>`).join("")}
   </div></div>`;
@@ -1129,6 +1137,11 @@ function opHTML(){
   <div class="page-head"><div><h1>${esc(o.name)}</h1><div class="sub">${UI.server===true && UI.env ? esc(UI.env.name)+" · " : ""}Operación creada el ${fmtDateLong(o.created)}</div></div>
     ${staff?`<div class="actions"><button class="btn btn-outline" data-action="rename-op"><span class="ms">edit</span>Renombrar</button>${isColab()&&!isSuper()?"":`<button class="btn btn-filled" data-action="new-op"><span class="ms">add</span>Nueva operación</button>`}</div>`:""}</div>
   <div class="op-grid">
+    ${isBroker() ? `<section class="panel"><h2>Propiedades del asistente</h2><p class="hint">Elegí qué pasa con las propiedades que carga el asistente en esta operación.</p>
+      <div class="stack" style="gap:8px">
+        <label class="radio-card"><input type="radio" name="auto-appr" data-action="auto-approve" data-v="0" ${o.autoApprove?"":"checked"}><span><b>Las apruebo yo</b><small>Quedan en «Por aprobar» y el cliente las ve recién cuando las aprobás.</small></span></label>
+        <label class="radio-card"><input type="radio" name="auto-appr" data-action="auto-approve" data-v="1" ${o.autoApprove?"checked":""}><span><b>Pasan directo al cliente</b><small>Se aprueban solas al cargarlas. Igual podés desaprobarlas después.</small></span></label>
+      </div></section>` : ""}
     ${UI.server===true ? srvOpPanelsHTML(o) : staff?`<section class="panel"><h2>Link para clientes</h2><p class="hint">Compartilo con todos los compradores de esta operación. Entran con su cuenta de Google y tienen los mismos permisos.</p>
       <div class="linkbox"><code>${esc(shareLink(o))}</code><button class="btn btn-tonal btn-sm" data-action="copy-link"><span class="ms">content_copy</span>Copiar</button></div>
       <small style="color:var(--ink-3)">El dominio final lo definís al publicar en Netlify.</small></section>`:""}
@@ -1253,7 +1266,7 @@ function propForm(p, imported){
       <div class="field"><label for="f-phone">Teléfono del anunciante</label><input id="f-phone" type="tel" value="${esc(e.phone||"")}" placeholder="+54 11 ..."><span class="help"><span class="ms" style="font-size:14px;vertical-align:-2px">lock</span> Solo lo ven el broker y el asistente.</span></div>
       <div class="field"><label>Fotos</label><div class="thumbs" id="thumbs">${thumbsHTML()}</div></div>
     </div></div>
-    <div class="dlg-foot">${p && isStaff()?`<button type="button" class="btn ${UI.confirmDelete===p.id?"btn-danger":"btn-text"}" data-action="del-prop" data-id="${p.id}" style="margin-right:auto">${UI.confirmDelete===p.id?"Confirmar eliminación":"Eliminar"}</button>`:""}<button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">${p?"Guardar cambios":isBroker()?"Agregar y aprobar":"Agregar para aprobación"}</button></div>
+    <div class="dlg-foot">${p && isStaff()?`<button type="button" class="btn ${UI.confirmDelete===p.id?"btn-danger":"btn-text"}" data-action="del-prop" data-id="${p.id}" style="margin-right:auto">${UI.confirmDelete===p.id?"Confirmar eliminación":"Eliminar"}</button>`:""}<button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">${p?"Guardar cambios":isBroker()?"Agregar y aprobar":(op() && op().autoApprove)?"Agregar para el cliente":"Agregar para aprobación"}</button></div>
   </form>`);
   if (imported) applyImport(imported);
 }
@@ -1311,8 +1324,9 @@ function detailDlg(p){
       <div id="stage-fields">${stageFields(p, p.status)}</div>
     </div>`;
   } else {
-    if (["oferta","negociacion"].includes(p.status)) stage = `<div class="box"><h3><span class="ms">request_quote</span>${STATUS[p.status].label}</h3><div class="facts" style="margin:0">${ro("Ofrecido",usd(p.offer.price))}${ro("Depósito",usd(p.offer.deposit))}${p.status==="negociacion"?ro("Contraoferta",usd(p.nego.counter)):""}</div><b style="font-size:13px">Documentos</b>${docList(p.offer.docs.concat(p.nego.docs),"none")}</div>`;
+    if (["oferta","negociacion"].includes(p.status)) stage = `<div class="box"><h3><span class="ms">request_quote</span>${STATUS[p.status].label}</h3><div class="facts" style="margin:0">${ro(p.status==="oferta"?"A ofrecer":"Ofrecido",usd(p.offer.price))}${ro(p.status==="oferta"?"Adelanto previsto":"Adelanto",usd(p.offer.deposit))}${p.status==="negociacion"?ro("Contraoferta",usd(p.nego.counter)):""}</div>${p.status==="negociacion"?docsHTML(p,"nego_receipt",false)+docsHTML(p,"nego",false):""}${docArr(p,"offer").length?docsHTML(p,"offer",false):""}</div>`;
     if (p.status==="reservada") stage = reserveRO(p);
+    if (p.status==="escritura") stage = deedRO(p) + reserveRO(p);
   }
   const clientActions = !staff ? (["nueva","leida"].includes(p.status) ? `<button class="btn btn-tonal" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>` : p.status==="descartada" ? `<button class="btn btn-text" data-action="restore" data-id="${p.id}"><span class="ms">undo</span>Volver a considerar</button>` : `<button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>`) : "";
   const brokerActions = isBroker() && p.approval==="aprobada" ? `<button class="btn btn-text" data-action="unapprove" data-id="${p.id}"><span class="ms">visibility_off</span>Desaprobar</button>` : isBroker() && p.approval!=="aprobada" ? `<button class="btn btn-filled" data-action="approve" data-id="${p.id}"><span class="ms">check</span>Aprobar para el cliente</button>${p.approval==="pendiente"?`<button class="btn btn-text" data-action="reject" data-id="${p.id}">Rechazar</button>`:""}` : "";
@@ -1348,37 +1362,96 @@ function detailDlg(p){
     <div class="dlg-foot">${staff?`<button class="btn btn-text" data-action="edit-prop" data-id="${p.id}" style="margin-right:auto"><span class="ms">edit</span>Editar datos</button>`:""}${clientActions}${brokerActions}${staff?`<button class="btn btn-filled" data-action="save-stage" data-id="${p.id}">Guardar estado</button>`:`<button class="btn btn-filled" data-action="close">Listo</button>`}</div>
   </div>`, true);
 }
+/* ---------- etapas: documentos y datos de cada estado ---------- */
+const DOC_KINDS = ["offer","nego_receipt","nego","res_signed","res_receipt"];
+const DOC_INFO = {
+  offer:{label:"Documentos de la oferta"},
+  nego_receipt:{label:"Recibo del adelanto", req:true},
+  nego:{label:"Otros documentos de la oferta"},
+  res_signed:{label:"Oferta final firmada", req:true},
+  res_receipt:{label:"Recibo del dinero", req:true}
+};
+function docArr(p, kind){
+  p.offer = p.offer || {price:"",deposit:"",docs:[]}; p.nego = p.nego || {counter:"",docs:[]};
+  p.reserve = p.reserve || {progress:0,notary:false,costs:"",commission:"",news:[]};
+  const where = {offer:[p.offer,"docs"], nego:[p.nego,"docs"], nego_receipt:[p.nego,"receipt"], res_signed:[p.reserve,"signed"], res_receipt:[p.reserve,"receipt"]}[kind];
+  if (!where) return [];
+  const [obj, key] = where; if (!Array.isArray(obj[key])) obj[key] = [];
+  return obj[key];
+}
+function deedOf(p){ if (!p.deed) p.deed = { place:"", address:"", date: (p.reserve && p.reserve.deedDate) || "", time:"", notes:"" }; return p.deed; }
+// Lo que falta para pasar a una etapa (vacío = se puede)
+function stageMissing(p, st){
+  const miss = [];
+  if (st==="negociacion" && !docArr(p,"nego_receipt").length) miss.push("subir el recibo del adelanto");
+  if (st==="reservada"){ if (!docArr(p,"res_signed").length) miss.push("subir la oferta final firmada"); if (!docArr(p,"res_receipt").length) miss.push("subir el recibo del dinero"); }
+  if (st==="escritura"){ const d = deedOf(p); if (!(d.place||d.address)) miss.push("cargar el lugar de la firma"); if (!d.date) miss.push("cargar la fecha de la firma"); }
+  return miss;
+}
+function docsHTML(p, kind, editable){
+  const arr = docArr(p, kind), info = DOC_INFO[kind];
+  return `<div class="field"><label>${info.label}${info.req?' <span class="req">obligatorio</span>':""}</label><ul class="doclist">${arr.map((d,i)=>`<li><span class="ms" style="font-size:18px;color:var(--ink-3)">description</span>${d.url?`<button type="button" class="t doc-open" data-action="open-doc" data-url="${esc(d.url)}" data-name="${esc(d.name)}">${esc(d.name)}</button>`:`<span class="t">${esc(d.name)}</span>`}<small>${kb(d.size)}</small>${editable?`<button type="button" class="icon-btn" style="width:30px;height:30px" data-action="rm-doc" data-kind="${kind}" data-i="${i}" data-id="${p.id}" aria-label="Quitar documento"><span class="ms" style="font-size:18px">delete</span></button>`:""}</li>`).join("")||`<li style="color:var(--ink-3)">Sin documentos</li>`}</ul>${editable?`<label class="btn btn-outline btn-sm" style="align-self:flex-start;margin-top:6px"><span class="ms">upload_file</span>Subir documento<input type="file" hidden multiple accept=".pdf,image/*,.doc,.docx" data-upload="${kind}" data-id="${p.id}"></label>`:""}</div>`;
+}
 function reserveRO(p){
   const r = p.reserve;
   return `<div class="box"><h3><span class="ms">verified</span>Reserva</h3>
     <div class="progress"><i style="width:${r.progress||0}%"></i></div><small class="num">Avance ${r.progress||0}%</small>
-    <dl class="kv" style="font-size:13px"><dt>Escribanía</dt><dd>${r.notary?"Aprobada":"Pendiente"}</dd><dt>Costos estimados</dt><dd>${usd(r.costs)}</dd><dt>Comisiones</dt><dd>${usd(r.commission)}</dd><dt>Fecha de escritura</dt><dd>${r.deedDate?fmtDateLong(r.deedDate):"—"}</dd></dl>
+    <dl class="kv" style="font-size:13px"><dt>Escribanía</dt><dd>${r.notary?"Aprobada":"Pendiente"}</dd><dt>Costos estimados</dt><dd>${usd(r.costs)}</dd><dt>Comisiones</dt><dd>${usd(r.commission)}</dd></dl>
+    ${docsHTML(p,"res_signed",false)}${docsHTML(p,"res_receipt",false)}
     ${r.news.length?`<b style="font-size:13px">Novedades</b><ul class="log">${[...r.news].reverse().map(n=>`<li><small>${fmtDateShort(n.date)}</small><span>${esc(n.text)}</span></li>`).join("")}</ul>`:""}</div>`;
 }
+function deedRO(p){
+  const d = deedOf(p);
+  const where = [d.place, d.address].filter(Boolean).join(" · ");
+  return `<div class="box"><h3><span class="ms">history_edu</span>Firma de escritura</h3>
+    <dl class="kv" style="font-size:13px"><dt>Fecha</dt><dd>${d.date?fmtDateLong(d.date)+(d.time?" · "+d.time:""):"—"}</dd><dt>Lugar</dt><dd>${esc(where||"—")}</dd>${d.notes?`<dt>Notas</dt><dd>${esc(d.notes)}</dd>`:""}</dl>
+    ${d.address?`<a class="btn btn-outline btn-sm" href="${mapsUrl(d.address)}" target="_blank" rel="noopener"><span class="ms">map</span>Ver en el mapa</a>`:""}</div>`;
+}
 function stageFields(p, st){
-  const docs = (arr, kind) => `<ul class="doclist">${arr.map((d,i)=>`<li><span class="ms" style="font-size:18px;color:var(--ink-3)">description</span><span class="t">${esc(d.name)}</span><small>${kb(d.size)}</small><button type="button" class="icon-btn" style="width:30px;height:30px" data-action="rm-doc" data-kind="${kind}" data-i="${i}" data-id="${p.id}" aria-label="Quitar documento"><span class="ms" style="font-size:18px">close</span></button></li>`).join("")||`<li style="color:var(--ink-3)">Sin documentos</li>`}</ul><label class="btn btn-outline btn-sm" style="align-self:flex-start;margin-top:6px"><span class="ms">upload_file</span>Subir documento<input type="file" hidden multiple data-upload="${kind}" data-id="${p.id}"></label>`;
-  if (st==="oferta" || st==="negociacion"){
-    return `<div class="form" style="margin-top:10px">
+  const miss = stageMissing(p, st);
+  const need = miss.length && st!==p.status ? `<div class="note" style="background:var(--amber-soft);margin-top:10px"><span class="ms" style="color:var(--amber)">info</span>Para pasar a «${STATUS[st].label}» falta: ${miss.join(", ")}.</div>` : "";
+  if (st==="oferta"){
+    return `${need}<div class="form" style="margin-top:10px">
+      <p class="hint" style="margin:0">El cliente quiere ofertar. Todavía no la formalizó.</p>
+      <div class="field h"><label for="d-offer">Precio a ofrecer (USD)</label><input id="d-offer" type="number" min="0" step="500" value="${p.offer.price??""}"></div>
+      <div class="field h"><label for="d-dep">Adelanto previsto (USD)</label><input id="d-dep" type="number" min="0" step="100" value="${p.offer.deposit??""}"></div>
+      ${docsHTML(p,"offer",true)}
+    </div>`;
+  }
+  if (st==="negociacion"){
+    return `${need}<div class="form" style="margin-top:10px">
+      <p class="hint" style="margin:0">Oferta formal con el adelanto depositado.</p>
       <div class="field h"><label for="d-offer">Precio ofrecido (USD)</label><input id="d-offer" type="number" min="0" step="500" value="${p.offer.price??""}"></div>
-      <div class="field h"><label for="d-dep">Depósito (USD)</label><input id="d-dep" type="number" min="0" step="100" value="${p.offer.deposit??""}"></div>
-      <div class="field"><label>Documentos de la oferta</label>${docs(p.offer.docs,"offer")}</div>
-      ${st==="negociacion"?`<div class="field"><label for="d-counter">Contraoferta a responder (USD)</label><input id="d-counter" type="number" min="0" step="500" value="${p.nego.counter??""}"></div><div class="field"><label>Documentos de la negociación</label>${docs(p.nego.docs,"nego")}</div>`:""}
+      <div class="field h"><label for="d-dep">Adelanto depositado (USD)</label><input id="d-dep" type="number" min="0" step="100" value="${p.offer.deposit??""}"></div>
+      <div class="field"><label for="d-counter">Contraoferta a responder (USD)</label><input id="d-counter" type="number" min="0" step="500" value="${p.nego.counter??""}"></div>
+      ${docsHTML(p,"nego_receipt",true)}${docsHTML(p,"nego",true)}${docArr(p,"offer").length?docsHTML(p,"offer",true):""}
     </div>`;
   }
   if (st==="reservada"){
     const r = p.reserve;
-    return `<div class="form" style="margin-top:10px">
+    return `${need}<div class="form" style="margin-top:10px">
+      ${docsHTML(p,"res_signed",true)}${docsHTML(p,"res_receipt",true)}
       <div class="field h"><label for="d-prog">Avance hasta la firma (%)</label><input id="d-prog" type="number" min="0" max="100" step="5" value="${r.progress||0}"></div>
-      <div class="field h"><label for="d-deed">Fecha de escritura</label><input id="d-deed" type="date" value="${r.deedDate||""}"></div>
       <div class="field h"><label for="d-costs">Costos estimados (USD)</label><input id="d-costs" type="number" min="0" value="${r.costs??""}"></div>
       <div class="field h"><label for="d-comm">Comisiones (USD)</label><input id="d-comm" type="number" min="0" value="${r.commission??""}"></div>
-      <div class="field"><label class="check"><input id="d-notary" type="checkbox" ${r.notary?"checked":""}> Escribanía aprobada</label></div>
+      <div class="field h"><label class="check" style="margin-top:28px"><input id="d-notary" type="checkbox" ${r.notary?"checked":""}> Escribanía aprobada</label></div>
       <div class="field"><label for="d-news">Nueva novedad</label><textarea id="d-news" placeholder="Ej.: Llegó el informe de dominio sin observaciones."></textarea></div>
       ${r.news.length?`<ul class="log">${[...r.news].reverse().map(n=>`<li><small>${fmtDateShort(n.date)}</small><span>${esc(n.text)}</span></li>`).join("")}</ul>`:""}
     </div>`;
   }
+  if (st==="escritura"){
+    const d = deedOf(p);
+    return `${need}<div class="form" style="margin-top:10px">
+      <div class="field h"><label for="d-deed-place">Escribanía o lugar <span class="req">obligatorio</span></label><input id="d-deed-place" value="${esc(d.place)}" placeholder="Ej.: Escribanía Pérez"></div>
+      <div class="field h"><label for="d-deed-addr">Dirección</label><input id="d-deed-addr" value="${esc(d.address)}" placeholder="Av. Cabildo 2000, Belgrano"></div>
+      <div class="field h"><label for="d-deed-date">Fecha <span class="req">obligatorio</span></label><input id="d-deed-date" type="date" value="${esc(d.date)}"></div>
+      <div class="field h"><label for="d-deed-time">Hora</label><input id="d-deed-time" type="time" step="900" value="${esc(d.time)}"></div>
+      <div class="field"><label for="d-deed-notes">Notas</label><textarea id="d-deed-notes" placeholder="Qué llevar, quiénes firman, etc.">${esc(d.notes)}</textarea></div>
+      ${docArr(p,"res_signed").length||docArr(p,"res_receipt").length?`${docsHTML(p,"res_signed",true)}${docsHTML(p,"res_receipt",true)}`:""}
+    </div>`;
+  }
   if (st==="descartada") return `<div class="form" style="margin-top:10px"><div class="field"><label for="d-reason">Motivo</label><input id="d-reason" value="${esc(p.choiceNote||"")}" placeholder="Ej.: El propietario no aceptó la oferta"></div></div>`;
-  return "";
+  return need;
 }
 
 function visitForm(v, presetProp, quick){
@@ -1617,12 +1690,16 @@ document.addEventListener("click", async e => {
     case "save-stage": {
       const p = prop(id); const st = $("#d-status").value; const prev = p.status;
       const num = sel => { const el = $(sel); return el && el.value!=="" ? Number(el.value) : ""; };
+      const v2 = sel => { const el = $(sel); return el ? el.value.trim() : ""; };
       if (st==="oferta"||st==="negociacion"){ p.offer.price = num("#d-offer"); p.offer.deposit = num("#d-dep"); }
       if (st==="negociacion"){ p.nego.counter = num("#d-counter"); }
       if (st==="reservada"){
-        p.reserve.progress = Math.min(100,Math.max(0,num("#d-prog")||0)); p.reserve.deedDate = $("#d-deed").value; p.reserve.costs = num("#d-costs"); p.reserve.commission = num("#d-comm"); p.reserve.notary = $("#d-notary").checked;
+        p.reserve.progress = Math.min(100,Math.max(0,num("#d-prog")||0)); p.reserve.costs = num("#d-costs"); p.reserve.commission = num("#d-comm"); p.reserve.notary = $("#d-notary").checked;
         const n = $("#d-news").value.trim(); if (n){ p.reserve.news.push({date:nowStamp(),text:n}); }
       }
+      if (st==="escritura"){ Object.assign(deedOf(p), { place:v2("#d-deed-place"), address:v2("#d-deed-addr"), date:v2("#d-deed-date"), time:v2("#d-deed-time"), notes:v2("#d-deed-notes") }); }
+      const miss = st!==prev ? stageMissing(p, st) : [];
+      if (miss.length){ save(); const box = $("#stage-fields"); if (box) box.innerHTML = stageFields(p, st); snack("Para pasar a «"+STATUS[st].label+"» falta: "+miss.join(", ")+"."); break; }
       if (st==="descartada"){ p.choiceNote = $("#d-reason").value.trim(); p.rank = null; }
       if (st!==prev){
         p.status = st;
@@ -1632,11 +1709,20 @@ document.addEventListener("click", async e => {
         if (st==="oferta" && p.offer.price) txt += ` · USD ${fmtNum(p.offer.price)}${p.offer.deposit?" con USD "+fmtNum(p.offer.deposit)+" de depósito":""}`;
         if (st==="negociacion" && p.nego.counter) txt += ` · contraoferta USD ${fmtNum(p.nego.counter)}`;
         if (st==="descartada" && p.choiceNote) txt += ` · ${p.choiceNote}`;
+        if (st==="escritura"){ const d = deedOf(p); txt += ` · ${fmtDateShort(d.date)}${d.time?" "+d.time:""} en ${d.place||d.address}`; }
         logp(p, txt);
       } else logp(p, "Datos de "+STATUS[st].label.toLowerCase()+" actualizados");
       renumber(); closeDlg(); commit("Estado guardado"); break;
     }
-    case "rm-doc": { const p = prop(id); const k = t.dataset.kind; (k==="offer"?p.offer.docs:p.nego.docs).splice(+t.dataset.i,1); save(); const st = $("#d-status")?.value; detailDlg(p); if (st && $("#d-status")) { $("#d-status").value = st; $("#stage-fields").innerHTML = stageFields(p, st); } break; }
+    case "open-doc": {
+      const url = t.dataset.url;
+      if (!/^\/api\//.test(url)) { snack("Este documento solo quedó registrado por nombre."); break; }
+      const w = window.open("", "_blank");
+      try { const r = await fetch(url, { headers: SRV.token ? { authorization: "Bearer " + SRV.token } : {} }); if (!r.ok) throw new Error((await r.json().catch(()=>({}))).message || "No se pudo abrir el documento."); const bl = await r.blob(); const u = URL.createObjectURL(bl); if (w) w.location = u; else window.open(u, "_blank"); }
+      catch(err){ if (w) w.close(); snack(err.message); }
+      break;
+    }
+    case "rm-doc": { const p = prop(id); const k = t.dataset.kind; const rem = docArr(p,k).splice(+t.dataset.i,1)[0]; if (rem) logp(p, "Documento quitado: "+rem.name); save(); const st = $("#d-status")?.value; detailDlg(p); if (st && $("#d-status")) { $("#d-status").value = st; $("#stage-fields").innerHTML = stageFields(p, st); } break; }
     case "add-visit": visitForm(null, id); break;
     case "edit-visit": { if (t.dataset.notice){ const n = notices().find(x=>x.id===t.dataset.notice); if (n) n.seen = [...new Set([...(n.seen||[]), role()])]; save(); } visitForm(o.visits.find(v=>v.id===id)); break; }
     case "open-visit": visitDetail(o.visits.find(v=>v.id===id)); break;
@@ -1804,6 +1890,10 @@ document.addEventListener("click", async e => {
       break;
     }
     case "clear-search": UI.search = ""; { const i = $("#prop-search"); if (i){ i.value = ""; i.focus(); } t.remove(); applySearch(); } break;
+    case "auto-approve": {
+      const v = t.dataset.v === "1"; if (!!o.autoApprove === v) break;
+      o.autoApprove = v; commit(v ? "Las propiedades del asistente van a pasar directo al cliente" : "Las propiedades del asistente van a esperar tu aprobación"); break;
+    }
     case "retry-boot": S.session = null; render(); bootServer(); break;
     case "admin-cancel": UI.adminLogin = false; render(); break;
     case "logout": if (UI.server === true){ closeMenu(); srvLogout(); break; }
@@ -1844,20 +1934,30 @@ document.addEventListener("change", async e => {
     }
     $("#thumbs").innerHTML = thumbsHTML(); return;
   }
-  if (up === "offer" || up === "nego"){
+  if (DOC_KINDS.includes(up)){
     const p = prop(t.dataset.id);
-    const arr = up==="offer" ? p.offer.docs : p.nego.docs;
-    [...t.files].forEach(f => arr.push({name:f.name, size:f.size}));
-    logp(p, `${t.files.length===1?"Documento subido":"Documentos subidos"}: ${[...t.files].map(f=>f.name).join(", ")}`);
-    save();
-    const st = $("#d-status").value;
-    $("#stage-fields").innerHTML = stageFields(p, st);
-    snack("Documento agregado");
+    const arr = docArr(p, up);
+    const files = [...t.files]; const ok = [];
+    const lbl = t.closest("label"); if (lbl) lbl.insertAdjacentHTML("afterend", `<span class="found" id="doc-msg">Subiendo…</span>`);
+    for (const f of files){
+      try {
+        if (UI.server === true){
+          if (f.size > 5*1024*1024) throw new Error(f.name + " pesa más de 5 MB.");
+          const r = await api(`/env/${encodeURIComponent(S.session.envId)}/docs/${encodeURIComponent(op().id)}`, { method:"POST", body:f, headers:{ "content-type": f.type || "application/pdf", "x-filename": encodeURIComponent(f.name) } });
+          arr.push({ name:r.name || f.name, size:r.size || f.size, url:r.url, at:nowStamp() });
+        } else arr.push({ name:f.name, size:f.size, at:nowStamp() });
+        ok.push(f.name);
+      } catch(err){ snack(err.message); }
+    }
+    $("#doc-msg")?.remove();
+    if (ok.length){ logp(p, `${DOC_INFO[up].label}: ${ok.join(", ")}`); save(); snack(ok.length===1 ? "Documento subido" : ok.length+" documentos subidos"); }
+    const st = $("#d-status") ? $("#d-status").value : p.status;
+    if ($("#stage-fields")) $("#stage-fields").innerHTML = stageFields(p, st);
   }
 });
 
 document.addEventListener("input", e => {
-  if ((e.target.id==="f-address" || e.target.id==="v-addr") && e.isTrusted !== false && !e.target.dataset.filling) placesSuggest(e.target);
+  if ((e.target.id==="f-address" || e.target.id==="v-addr" || e.target.id==="d-deed-addr") && e.isTrusted !== false && !e.target.dataset.filling) placesSuggest(e.target);
   if (e.target.id==="prop-search"){ UI.search = e.target.value; applySearch(); const box = e.target.parentElement; const x = box.querySelector(".mini-x"); if (UI.search && !x) box.insertAdjacentHTML("beforeend", `<button class="mini-x" data-action="clear-search" aria-label="Borrar búsqueda"><span class="ms">close</span></button>`); if (!UI.search && x) x.remove(); return; }
   if (e.target.id==="v-addr"){ const m = $("#v-map"); if (m) m.href = mapsUrl(e.target.value); } });
 
@@ -1929,11 +2029,12 @@ document.addEventListener("submit", async e => {
     }
     if (id){ Object.assign(prop(id), data); logp(prop(id),"Datos editados"); closeDlg(); commit("Cambios guardados"); }
     else {
-      const p = Object.assign({id:uid("p"), approval: isBroker()?"aprobada":"pendiente", status:"nueva", rank:null, offer:{price:"",deposit:"",docs:[]}, nego:{counter:"",docs:[]}, reserve:{progress:0,notary:false,costs:"",commission:"",deedDate:"",news:[]}, log:[], choiceNote:""}, data);
-      logp(p, `Cargada por ${roleLabel()}${isBroker()?" y aprobada":""}`);
+      const autoOk = !isBroker() && !!(($("#f-op") && S.ops.find(x=>x.id===$("#f-op").value)) || o).autoApprove;
+      const p = Object.assign({id:uid("p"), approval: (isBroker() || autoOk)?"aprobada":"pendiente", status:"nueva", rank:null, offer:{price:"",deposit:"",docs:[]}, nego:{counter:"",docs:[]}, reserve:{progress:0,notary:false,costs:"",commission:"",deedDate:"",news:[]}, log:[], choiceNote:""}, data);
+      logp(p, `Cargada por ${roleLabel()}${isBroker()?" y aprobada":autoOk?" (aprobación automática)":""}`);
       const target = ($("#f-op") && S.ops.find(x=>x.id===$("#f-op").value)) || o;
       if (target !== o){ S.currentOp = target.id; if (UI.server===true){ SRV.opId = target.id; saveSrv(); } }
-      target.props.unshift(p); closeDlg(); UI.propFilter = "todas"; UI.view = "propiedades"; commit(isBroker() ? "Propiedad agregada y visible para el cliente" : "Propiedad agregada. Queda esperando la aprobación del broker");
+      target.props.unshift(p); closeDlg(); UI.propFilter = "todas"; UI.view = "propiedades"; commit(isBroker() || autoOk ? "Propiedad agregada y visible para el cliente" : "Propiedad agregada. Queda esperando la aprobación del broker");
     }
     return;
   }

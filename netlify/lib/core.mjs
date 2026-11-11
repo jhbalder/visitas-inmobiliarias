@@ -201,7 +201,10 @@ export function mergeClient(stored, inc, email) {
 export function mergeAssistant(stored, inc) {
   const out = structuredClone(inc);
   const sp = new Map(((stored && stored.props) || []).map((p) => [p.id, p]));
-  out.props = (out.props || []).map((p) => ({ ...p, approval: sp.has(p.id) ? sp.get(p.id).approval : "pendiente" }));
+  // Las propiedades nuevas del asistente quedan por aprobar, salvo que el broker haya activado la aprobación automática.
+  const auto = !!(stored && stored.autoApprove);
+  out.autoApprove = auto;
+  out.props = (out.props || []).map((p) => ({ ...p, approval: sp.has(p.id) ? sp.get(p.id).approval : (auto ? "aprobada" : "pendiente") }));
   const sv = new Map(((stored && stored.visits) || []).map((v) => [v.id, v]));
   out.visits = (out.visits || []).map((v) => {
     const s = sv.get(v.id);

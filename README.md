@@ -11,6 +11,21 @@ App para coordinar propiedades, visitas y ofertas entre brokers, asistentes y cl
 - **Cliente**: lo invita el broker o un asistente, con un link para una operación. Ve solo esa búsqueda y solo las propiedades aprobadas (sin el teléfono del anunciante).
 - **Cliente invitado por otro cliente**: un cliente puede invitar a otra persona (pareja, familiar) a **su misma búsqueda**, con los mismos permisos.
 
+## Seguimiento de cada propiedad
+
+Por aprobar → Nuevas → Leídas → Agendar visita → Por visitar → Oferta → En negociación → Reservada → Firma de escritura (y Descartadas aparte).
+
+- **Por aprobar**: el broker todavía no la aprobó. En Operación → «Propiedades del asistente», el broker elige si las que carga el asistente esperan su aprobación o pasan directo al cliente.
+- **Nuevas / Leídas**: el cliente la tiene para ver / la abrió pero no decidió.
+- **Agendar visita**: el cliente tocó «Quiero verla». Recién ahí se puede agendar.
+- **Por visitar**: tiene visita confirmada.
+- **Oferta**: el cliente quiere ofertar, sin formalizar.
+- **En negociación**: exige subir el **recibo del adelanto** (y se pueden sumar otros documentos de la oferta).
+- **Reservada**: exige subir la **oferta final firmada** y el **recibo del dinero**.
+- **Firma de escritura**: exige cargar **lugar** y **fecha** de la firma.
+
+Los documentos (PDF, foto o Word, hasta 5 MB) se guardan en Netlify Blobs y solo los pueden abrir las personas con acceso a esa operación.
+
 Cada link de invitación sirve para **una sola cuenta de Google** y vence en **14 días**. Se pueden anular antes.
 
 ## Qué hay en esta carpeta
