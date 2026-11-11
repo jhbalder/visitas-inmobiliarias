@@ -106,7 +106,8 @@ export function mapRemaxApi(d) {
   const desc = String(d.description || "");
   const pisoM = desc.match(/(\d{1,2})\s*(?:°|º|\.º|\.°|er\.?|do\.?|to\.?|vo\.?|no\.?)\s*piso\b/i);
   const phone = ((d.associate && d.associate.phones) || []).find((p) => p && p.value) || null;
-  const geoLabel = d.geo && (d.geo.neighborhood || d.geo.label);
+  const geoLabel = d.geo && (d.geo.label || d.geo.neighborhood);
+  const balcon = (d.features || []).some((x) => x && /balc/i.test(String(x.lang || x.value || ""))) ? "Sí" : null;
   const fields = clean({
     title: d.title,
     price: usd && d.priceExposure !== false ? num(d.price) : null,
@@ -114,13 +115,15 @@ export function mapRemaxApi(d) {
     currency: cur || null,
     expensas: num(d.expensesPrice) || null,
     m2: num(d.dimensionTotalBuilt) || num(d.dimensionCovered) || num(d.dimensionLand) || null,
+    m2cub: num(d.dimensionCovered) || null,
+    balcon,
     amb: num(d.totalRooms) || (num(d.bedrooms) != null ? num(d.bedrooms) + 1 : null),
     banos: num(d.bathrooms),
     cocheras: num(d.parkingSpaces),
     pisos: num(d.floors) || null,
     piso: pisoM ? num(pisoM[1]) : (/planta baja/i.test(desc) ? "PB" : null),
     address: d.displayAddress || null,
-    barrio: geoLabel ? titleCase(String(geoLabel).split(",")[0]) : null,
+    barrio: geoLabel ? titleCase(String(geoLabel)) : null,
     phone: phone ? phone.value.replace(/[()]/g, " ").replace(/\s+/g, " ").trim() : null
   });
   const photos = (d.photos || []).filter((p) => p && !p.is360).sort((a, b) => (a.position || 0) - (b.position || 0))
@@ -150,6 +153,8 @@ export function parseRemax(html, href) {
   }
   f.expensas = n(grab(/expensas\s*:?\s*\$?\s*(\d[\d.,]*)/i));
   f.m2 = n(grab(/superficie total\s*:?\s*(\d[\d.,]*)\s*m/i)) ?? n(grab(/(\d[\d.,]*)\s*m²\s*totales/i)) ?? n(grab(/superficie cubierta\s*:?\s*(\d[\d.,]*)\s*m/i));
+  f.m2cub = n(grab(/(\d[\d.,]*)\s*m²\s*cubiertos/i)) ?? n(grab(/superficie cubierta\s*:?\s*(\d[\d.,]*)\s*m/i));
+  if (/\bbalc[oó]n\b/i.test(T)) f.balcon = "Sí";
   f.amb = n(grab(/\bambientes\s*:\s*(\d{1,2})/i)) ?? n(grab(/(\d{1,2})\s*ambientes/i));
   if (f.amb == null) { const d = n(grab(/dormitorios\s*:?\s*(\d{1,2})/i)); if (d != null) f.amb = d + 1; }
   f.banos = n(grab(/\bbaños\s*:?\s*(\d{1,2})/i)) ?? n(grab(/(\d{1,2})\s*baños?/i));
@@ -236,6 +241,7 @@ export function parseArgenprop(html, href) {
   const priceTxt = one(/<p[^>]*class="titlebar__price"[^>]*>([\s\S]*?)<\/p>/i);
   const feats = {};
   for (const m of html.matchAll(/<li[^>]*>\s*<h3>\s*([^<:]+?)\s*:\s*<strong>\s*([\s\S]*?)\s*<\/strong>/gi)) feats[strip(m[1]).toLowerCase()] = strip(m[2]);
+  const flags = matchAll(html, /<li[^>]*>\s*<h3>\s*<strong>([^<]{2,60})<\/strong>\s*<\/h3>/gi).map((x) => strip(x).toLowerCase());
   const ft = (re) => { for (const [k, v] of Object.entries(feats)) if (re.test(k)) return v; return null; };
   const money = (t) => {
     if (!t) return;
@@ -243,22 +249,31 @@ export function parseArgenprop(html, href) {
     if (/USD|U\$S|US\$/i.test(t)) f.price = n2; else if (n2) { f.priceOther = n2; f.currency = "ARS"; }
   };
   money(priceTxt && /\d/.test(priceTxt) ? priceTxt : ft(/^precio$/));
-  f.expensas = num((ft(/^expensas$/) || one(/titlebar__price-mobile[\s\S]*?<span>([^<]*expensas[^<]*)<\/span>/i) || "").match(/[\d.,]{3,}/)?.[0]);
+  f.expensas = num((ft(/^expensas$/) || one(/<p[^>]*class="titlebar__expenses[^"]*"[^>]*>([\s\S]*?)<\/p>/i) || one(/titlebar__price-mobile[\s\S]*?<span>([^<]*expensas[^<]*)<\/span>/i) || "").match(/[\d.,]{3,}/)?.[0]);
   f.amb = num(ft(/ambientes/));
   if (f.amb == null) { const d = num(ft(/dormitorios/)); if (d != null) f.amb = d + 1; }
   f.banos = num(ft(/baños|banos/));
   f.cocheras = num(ft(/cochera/));
-  f.m2 = num((ft(/sup\.? total|superficie total/) || "").match(/[\d.,]+/)?.[0]) ?? num((ft(/sup\.? cubierta/) || "").match(/[\d.,]+/)?.[0]);
+  f.m2cub = num((ft(/sup\.? cubierta|superficie cubierta/) || "").match(/[\d.,]+/)?.[0]);
+  f.m2 = num((ft(/sup\.? total|superficie total/) || "").match(/[\d.,]+/)?.[0]) ?? f.m2cub;
+  const balc = ft(/balc[oó]n/);
+  if (balc) f.balcon = /^no$/i.test(balc) ? "No" : /^s[ií]$/i.test(balc) ? "Sí" : titleCase(balc.toLowerCase()).replace(/^Frances$/, "Francés");
+  else if (flags.some((x) => /^balc[oó]n/.test(x))) f.balcon = "Sí";
   const pisoTxt = ft(/^piso|ubicaci[oó]n.*piso|n[uú]mero de piso/); if (pisoTxt) f.piso = /pb|planta baja/i.test(pisoTxt) ? "PB" : num(pisoTxt);
   f.pisos = num(ft(/cant\.? pisos|pisos del edificio|cantidad de pisos/));
-  f.address = one(/<h2[^>]*class="titlebar__address"[^>]*>([\s\S]*?)<\/h2>/i);
+  // «Quesada 2800» + «Venta en Belgrano, CABA»; dirección completa en location-label
+  const street = one(/<h2[^>]*class="titlebar__address"[^>]*>([\s\S]*?)<\/h2>/i);
+  const head = one(/<h2[^>]*class="titlebar__title"[^>]*>([\s\S]*?)<\/h2>/i);
   const loc = one(/<p[^>]*class="location-label"[^>]*>[\s\S]*?<span>([\s\S]*?)<\/span>/i);
-  if (loc) { const parts = loc.split(",").map((x) => x.trim()); if (!f.address) f.address = parts[0]; if (parts[1]) f.barrio = parts[1]; }
+  f.address = loc || street;
+  const enM = head && head.match(/\ben\s+(.+)$/i);
+  if (enM) f.barrio = enM[1].trim();
+  else if (loc) { const parts = loc.split(",").map((x) => x.trim()); if (parts[1]) f.barrio = parts.slice(1, 3).join(", "); }
   // Título: descripción corta del aviso (JSON-LD/og:description) o og:title
   const base = parseHtml(html, href);
   const og = (p) => { const m = html.match(new RegExp(`<meta[^>]+content="([^"]*)"[^>]*property="${p}"|<meta[^>]+property="${p}"[^>]*content="([^"]*)"`, "i")); return m ? decode(m[1] || m[2]) : null; };
   const ogDesc = og("og:description");
-  f.title = ogDesc && ogDesc.length < 140 ? ogDesc : (base.fields.title || og("og:title"));
+  f.title = street && head ? `${street} ${head}` : (head || (ogDesc && ogDesc.length < 140 ? ogDesc : (base.fields.title || og("og:title"))));
   // Fotos: solo las de la carpeta del aviso (la de og:image), en tamaño completo
   const ogImg = og("og:image") || "";
   const folder = (ogImg.match(/static-content\/([^/]+)\//) || [])[1];
@@ -319,7 +334,9 @@ export function parseMercadoLibre(html, href) {
   }
   const sp = (re) => { for (const [k, v] of Object.entries(specs)) if (re.test(k)) return v; return null; };
   const first = (v) => num(String(v || "").split(/\s+a\s+/)[0].match(/[\d.,]+/)?.[0]);
-  f.m2 = first(sp(/^superficie total$/)) ?? first(sp(/^superficie cubierta$/));
+  f.m2cub = first(sp(/^superficie cubierta$/));
+  f.m2 = first(sp(/^superficie total$/)) ?? f.m2cub;
+  const balc = sp(/^balc[oó]n$/); if (balc) f.balcon = /^s[ií]$/i.test(balc) ? "Sí" : /^no$/i.test(balc) ? "No" : balc;
   f.amb = first(sp(/^ambientes$/));
   if (f.amb == null && first(sp(/^dormitorios$/)) != null) f.amb = first(sp(/^dormitorios$/)) + 1;
   f.banos = first(sp(/^baños$/));
@@ -334,7 +351,13 @@ export function parseMercadoLibre(html, href) {
     ...[...html.matchAll(/"id":"LOCATION_RE"[^}]*\},"title":\{"text":"([^"]{6,160})"/g)].map((m) => m[1]),
     ...[...html.matchAll(/class="[^"]*ui-pdp-media__title[^"]*"[^>]*>([^<]{6,160})</g)].map((m) => decode(m[1]).trim())
   ].filter((t) => /\d/.test(t) && t.includes(","));
-  if (locs[0]) { const parts = locs[0].split(",").map((x) => x.trim()); f.address = parts[0]; if (parts[1]) f.barrio = parts[1]; }
+  if (locs[0]) {
+    // «Zapiola 2100, Belgrano R, Capital Federal, Capital Federal» -> dirección «Zapiola 2100, Capital Federal», localidad «Belgrano R, Capital Federal»
+    const parts = [...new Set(locs[0].split(",").map((x) => x.trim()).filter(Boolean))];
+    const city = parts.length > 1 ? parts[parts.length - 1] : null;
+    f.address = city && parts.length > 2 ? `${parts[0]}, ${city}` : parts[0];
+    if (parts[1]) f.barrio = parts.slice(1).join(", ");
+  }
   const ids = [];
   for (const m of html.matchAll(/https:\/\/http2\.mlstatic\.com\/D_NQ_NP_(?:2X_)?(\d+-MLA\d+_\d+)-[A-Z]\.(?:webp|jpg)/g)) if (!ids.includes(m[1])) ids.push(m[1]);
   const photos = ids.map((id) => `https://http2.mlstatic.com/D_NQ_NP_2X_${id}-F.webp`).slice(0, MAX_PHOTOS);
