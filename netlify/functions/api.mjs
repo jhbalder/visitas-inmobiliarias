@@ -6,7 +6,7 @@ import {
 } from "../lib/core.mjs";
 
 export const config = {
-  path: ["/api/config", "/api/session", "/api/me", "/api/envs", "/api/invites", "/api/invites/*", "/api/env/*", "/api/admin/*", "/api/photo/*"]
+  path: ["/api/lugares", "/api/config", "/api/session", "/api/me", "/api/envs", "/api/invites", "/api/invites/*", "/api/env/*", "/api/admin/*", "/api/photo/*"]
 };
 
 const INVITE_DAYS = 14;
@@ -31,6 +31,7 @@ export default async (req) => {
 
     const user = await requireUser(req);
     if (a === "me" && m === "GET") return await me(user);
+    if (a === "lugares" && m === "GET") return await places(url.searchParams.get("q"));
     if (a === "envs" && !b && m === "POST") return await createEnv(user, await body(req));
     if (a === "invites") {
       if (!b && m === "POST") return await createInvite(user, await body(req));
@@ -87,6 +88,46 @@ async function me(user) {
     envs.push({ envId, name: meta.name, brokerName: meta.brokerName, role: mem.role, opIds: mem.opIds || [], active: meta.active !== false });
   }
   return json({ user: { email: user.email, name: user.name, picture: user.picture, super: user.super }, envs });
+}
+
+/* ---------- direcciones (Google Maps; si no hay clave, OpenStreetMap) ---------- */
+async function places(q) {
+  q = String(q || "").trim().slice(0, 120);
+  if (q.length < 3) return json({ items: [], source: null });
+  const clean = (t) => String(t || "").replace(/,\s*Argentina$/i, "").trim();
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (key) {
+    try {
+      const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+        method: "POST", signal: AbortSignal.timeout(6000),
+        headers: { "content-type": "application/json", "X-Goog-Api-Key": key },
+        body: JSON.stringify({ input: q, includedRegionCodes: ["ar"], languageCode: "es", regionCode: "ar" })
+      });
+      const d = await r.json();
+      if (r.ok) {
+        const items = (d.suggestions || []).map((x) => x.placePrediction).filter(Boolean).slice(0, 6).map((p) => ({
+          main: p.structuredFormat?.mainText?.text || p.text?.text || "",
+          secondary: clean(p.structuredFormat?.secondaryText?.text),
+          full: clean(p.text?.text)
+        }));
+        return json({ items, source: "google" });
+      }
+      console.error("Places:", r.status, JSON.stringify(d).slice(0, 300));
+    } catch (e) { console.error("Places:", e); }
+  }
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=ar&limit=6&accept-language=es&q=" + encodeURIComponent(q), {
+      signal: AbortSignal.timeout(6000), headers: { "user-agent": "VisitasInmobiliarias/1.0 (app de visitas)" }
+    });
+    const d = await r.json();
+    const items = (Array.isArray(d) ? d : []).map((x) => {
+      const a = x.address || {};
+      const main = [a.road || a.pedestrian || x.name, a.house_number].filter(Boolean).join(" ");
+      const secondary = [a.suburb || a.neighbourhood || a.city_district, a.city || a.town || a.village || a.state].filter(Boolean).join(", ");
+      return { main: main || clean(x.display_name).split(",")[0], secondary, full: [main, secondary].filter(Boolean).join(", ") || clean(x.display_name) };
+    });
+    return json({ items, source: "osm" });
+  } catch (e) { return json({ items: [], source: null }); }
 }
 
 /* ---------- invitaciones ---------- */
