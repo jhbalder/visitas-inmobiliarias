@@ -660,6 +660,8 @@ function render(){
   if (UI.server === true){
     if (!S.session){ root.innerHTML = srvLoginHTML(); mountGoogle(); return; }
     if (S.session.noAccess){ root.innerHTML = noAccessHTML(); return; }
+    // Sin ambiente elegido no se puede trabajar en operaciones: el superusuario vuelve a su panel.
+    if (!S.session.envId && isSuper() && UI.view !== "brokers"){ UI.view = "brokers"; }
     syncClientId();
     if (UI.view === "brokers" && isSuper()){ root.innerHTML = shellHTML(op()); return; }
   }
@@ -1585,6 +1587,10 @@ document.addEventListener("click", async e => {
       if (isSuper() && !UI.admin) loadAdmin();
       break;
     }
+    case "own-env":
+      textForm("own-env", "Crear mi ambiente de broker", "Nombre de tu inmobiliaria", "", "Crear");
+      { const i = $("#t-val"); if (i) i.placeholder = "Ej.: Balderrama Propiedades"; }
+      break;
     case "enter-env": closeMenu(); SRV.opId = null; try { await loadEnv(id, true); } catch(err){ snack(err.message); } break;
     case "toggle-env": {
       const act = t.dataset.active !== "true";
@@ -1702,7 +1708,10 @@ document.addEventListener("submit", async e => {
     const k = f.dataset.kind, btn = f.querySelector("button[type=submit]"), msg = $("#in-msg");
     const body = { type:k, name: val("#in-name") };
     if (k === "broker") body.envName = val("#in-env");
-    else { body.envId = S.session.envId; }
+    else {
+      body.envId = S.session.envId || (UI.env && UI.env.id);
+      if (!body.envId){ msg.textContent = "Primero entrá a un ambiente (panel Brokers → Entrar, o creá tu ambiente de broker)."; return; }
+    }
     if (k === "asistente") body.opIds = [...f.querySelectorAll("input[name=in-ops]:checked")].map(x=>x.value);
     if (k === "cliente" || k === "colaborador") body.opId = op().id;
     btn.disabled = true;
@@ -1810,6 +1819,15 @@ document.addEventListener("submit", async e => {
   if (kind === "new-op"){
     const n = val("#t-val"); const nop = {id:uid("op"), name:n, created:ymd(today()), clients:[], props:[], visits:[], notices:[]};
     S.ops.push(nop); S.currentOp = nop.id; UI.view = "operacion"; UI.weekStart = null; UI.team = null; if (UI.server===true){ SRV.opId = nop.id; saveSrv(); } closeDlg(); commit(UI.server===true ? "Operación creada. Invitá a tus clientes desde acá" : "Operación creada. Copiá el link para el cliente"); return;
+  }
+  if (kind === "own-env"){
+    try {
+      const r = await api("/admin/envs", {method:"POST", body:{name: val("#t-val")}});
+      UI.me = await api("/me"); UI.admin = null; closeDlg(); SRV.opId = null;
+      await loadEnv(r.envId, false);
+      snack("Listo, ya tenés tu ambiente. Creá tu primera operación.");
+    } catch(err){ snack(err.message); }
+    return;
   }
   if (kind === "rename-op"){ o.name = val("#t-val"); closeDlg(); commit("Nombre actualizado"); return; }
 });
@@ -1996,7 +2014,7 @@ function dirtyOps(){ return S.ops.filter(o => SYNC.snap[o.id] !== snapOf(o)); }
 function scheduleSync(){ setSync("saving"); clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncNow, 350); }
 async function syncNow(){
   if (SYNC.busy){ SYNC.again = true; return; }
-  if (!S.session || !S.session.envId){ setSync("ok"); return; }
+  if (!S.session || !S.session.envId){ setSync(dirtyOps().length ? "error" : "ok"); return; }
   SYNC.busy = true; let failed = false, needRender = false;
   try {
     for (const o of dirtyOps()){
@@ -2129,10 +2147,12 @@ async function loadAdmin(){
 function brokersHTML(){
   if (!UI.admin){ loadAdmin(); UI.admin = { loading:true, envs:[], invites:[] }; }
   const A = UI.admin;
+  const ownEnv = ((UI.me && UI.me.envs) || []).find(e => e.role === "broker");
   const fmtD = (t) => { const d = new Date(t); return d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear(); };
   return `
   <div class="page-head"><div><h1>Brokers</h1><div class="sub">Cada broker tiene su propio ambiente, donde administra asistentes, clientes y operaciones.</div></div>
-    <div class="actions"><button class="btn btn-filled" data-action="invite" data-kind="broker"><span class="ms">person_add</span>Invitar broker</button></div></div>
+    <div class="actions">${ownEnv ? `<button class="btn btn-outline" data-action="enter-env" data-id="${ownEnv.envId}"><span class="ms">apartment</span>Ir a mi ambiente</button>` : `<button class="btn btn-outline" data-action="own-env"><span class="ms">add_business</span>Crear mi ambiente de broker</button>`}<button class="btn btn-filled" data-action="invite" data-kind="broker"><span class="ms">person_add</span>Invitar broker</button></div></div>
+  ${!ownEnv ? `<div class="note" style="margin-bottom:18px"><span class="ms">info</span><span>Para cargar propiedades y operaciones propias, creá tu ambiente de broker. También podés tocar <b>Entrar</b> en el ambiente de un broker para trabajar en el suyo.</span></div>` : ""}
   ${A.error ? `<div class="note" style="background:var(--red-soft)"><span class="ms" style="color:var(--red)">error</span>${esc(A.error)}</div>` : ""}
   <div class="summary">
     <div class="stat"><b>${A.envs.length}</b><span>Ambientes</span></div>
