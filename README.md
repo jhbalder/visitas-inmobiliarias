@@ -4,10 +4,10 @@ App para coordinar propiedades, visitas y ofertas entre brokers, asistentes y cl
 
 ## Cómo funcionan los usuarios
 
-- **Superusuario**: entra con su cuenta de Google (su mail se configura en Netlify). Administra la lista de brokers, los invita, entra a cualquier ambiente y puede cambiar de rol para ver la app como Broker, Asistente o Cliente.
-- **Broker**: recibe un link único del superusuario. Al ingresar con Google se crea **su ambiente**, donde es el administrador. Crea operaciones, aprueba propiedades y confirma visitas.
+- **Superusuario**: entra con su cuenta de Google (su mail se configura en Netlify). Desde el panel **Brokers** invita brokers (cada uno recibe su ambiente) y puede **crear ambientes propios** con «Nuevo ambiente», donde actúa como broker. Entra a cualquier ambiente y cambia de rol (Broker, Asistente o Cliente) desde el menú de la cuenta. En cualquier ambiente puede invitar o asignar brokers.
+- **Broker**: recibe un link del superusuario (se le crea su ambiente) o lo suman a un ambiente existente. Puede **crear más ambientes** (selector de ambiente → «Nuevo ambiente») y **sumar otros brokers** a cualquier ambiente donde es broker: Operación → **Brokers del ambiente** → «Invitar broker» (link) o «Asignar broker existente» (por mail, sin link). Un ambiente puede tener varios brokers, todos con los mismos permisos; se puede quitar a cualquiera menos al último.
 - **Asistente**: solo lo crea el broker, con un link único. Puede haber varios asistentes por broker. Cada uno ve **solo las operaciones que el broker le asigna** (se cambian desde Operación → Asistentes). Si un asistente crea una operación, queda asignado a ella.
-- **Broker invitado**: el broker dueño del ambiente puede sumar a otro broker a **una operación puntual** (Operación → Brokers invitados). Trabaja esa operación como broker (aprueba propiedades, confirma visitas, invita clientes), pero no ve el resto del ambiente, no crea operaciones ni maneja el equipo. Si ese broker tiene su propio ambiente, cambia entre los dos desde el selector de arriba. El superusuario también puede **asignar un broker existente** a una operación sin link: entra al ambiente, elige la operación y va a Operación → Brokers invitados → **Asignar broker existente**.
+- **Broker solo en una operación**: un broker del ambiente puede sumar a otro broker a **una operación puntual** (Operación → Brokers solo en esta operación). Trabaja esa operación como broker (aprueba propiedades, confirma visitas, invita clientes), pero no ve el resto del ambiente, no crea operaciones ni maneja el equipo. Si ese broker tiene su propio ambiente, cambia entre los dos desde el selector de arriba. El superusuario también puede **asignar un broker existente** a una operación sin link: entra al ambiente, elige la operación y va a Operación → Brokers solo en esta operación → **Asignar a esta operación**.
 - **Cliente**: lo invita el broker o un asistente, con un link para una operación. Ve solo esa búsqueda y solo las propiedades aprobadas (sin el teléfono del anunciante).
 - **Cliente invitado por otro cliente**: un cliente puede invitar a otra persona (pareja, familiar) a **su misma búsqueda**, con los mismos permisos.
 
@@ -53,8 +53,8 @@ Después de cargarlas: **Deploys → Trigger deploy → Deploy project**.
 ## 4. Primer uso
 
 1. Abrí tu sitio y tocá **Continuar con Google** con el mail de superusuario. Entrás al panel **Brokers**.
-2. **Invitar broker** → nombre y nombre de la inmobiliaria → copiá el link o mandalo por WhatsApp.
-3. El broker abre el link, entra con Google y crea su primera operación.
+2. Para trabajar vos como broker: **Nuevo ambiente** → nombre → creá la primera operación. Después, en Operación → Brokers del ambiente, invitá o asigná otros brokers.
+3. Para darle a un broker su propio ambiente: **Invitar broker** → nombre y nombre de la inmobiliaria → copiá el link o mandalo por WhatsApp. El broker abre el link, entra con Google y crea su primera operación.
 4. Desde **Operación**, el broker invita asistentes (eligiendo qué operaciones ven) y clientes.
 
 Para revisar la configuración: `https://TU-SITIO.netlify.app/api/config` tiene que mostrar `"google":true,"secret":true,"superuser":true`.

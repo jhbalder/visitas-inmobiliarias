@@ -6,7 +6,7 @@ import {
 } from "../lib/core.mjs";
 
 export const config = {
-  path: ["/api/config", "/api/session", "/api/me", "/api/invites", "/api/invites/*", "/api/env/*", "/api/admin/*", "/api/photo/*"]
+  path: ["/api/config", "/api/session", "/api/me", "/api/envs", "/api/invites", "/api/invites/*", "/api/env/*", "/api/admin/*", "/api/photo/*"]
 };
 
 const INVITE_DAYS = 14;
@@ -31,6 +31,7 @@ export default async (req) => {
 
     const user = await requireUser(req);
     if (a === "me" && m === "GET") return await me(user);
+    if (a === "envs" && !b && m === "POST") return await createEnv(user, await body(req));
     if (a === "invites") {
       if (!b && m === "POST") return await createInvite(user, await body(req));
       if (b && c === "accept" && m === "POST") return await acceptInvite(user, b);
@@ -42,6 +43,7 @@ export default async (req) => {
       if (c === "ops" && d && m === "PUT") return await putOp(user, b, d, await body(req));
       if (c === "ops" && d && m === "DELETE") return await deleteOp(user, b, d);
       if (c === "team" && m === "GET") return await getTeam(user, b);
+      if (c === "brokers" && !d && m === "POST") return await assignBroker(user, b, await body(req));
       if (c === "members" && d && m === "PUT") return await updateMember(user, b, d, await body(req));
       if (c === "members" && d && m === "DELETE") return await removeMember(user, b, d);
       if (c === "photos" && m === "POST") return await uploadPhoto(user, b, req);
@@ -91,7 +93,7 @@ const inviteKey = (token) => {
   if (!validId(scope) || !/^[A-Za-z0-9_-]+~[A-Za-z0-9]{16,}$/.test(token)) fail(400, "invitacion", "El link de invitación no es válido.");
   return `invites/${scope}/${token}`;
 };
-const ROLE_LABEL = { broker: "Broker", asistente: "Asistente", cliente: "Cliente", colaborador: "Broker invitado" };
+const ROLE_LABEL = { broker: "Broker", broker_env: "Broker", asistente: "Asistente", cliente: "Cliente", colaborador: "Broker invitado" };
 
 async function createInvite(user, inp) {
   const type = inp.type;
@@ -101,6 +103,11 @@ async function createInvite(user, inp) {
     if (!user.super) fail(403, "solo_admin", "Solo el superusuario invita brokers.");
     scope = "brokers";
     envName = String(inp.envName || "").trim().slice(0, 80) || (name ? "Inmobiliaria " + name : "Nueva inmobiliaria");
+  } else if (type === "broker_env") {
+    envId = inp.envId;
+    const ctx = await envContext(user, envId);
+    if (ctx.role !== "broker") fail(403, "permiso", "Solo un broker del ambiente puede invitar a otros brokers.");
+    envName = ctx.meta.name; scope = envId;
   } else if (type === "asistente" || type === "cliente" || type === "colaborador") {
     envId = inp.envId;
     const ctx = await envContext(user, envId);
@@ -161,7 +168,8 @@ async function acceptInvite(user, token) {
     meta.members = meta.members || [];
     let mem = meta.members.find((x) => x.email === user.email);
     if (!mem) { mem = { email: user.email, name: user.name, role: inv.type, opIds: [], added: Date.now() }; meta.members.push(mem); }
-    if (mem.role !== "broker") {
+    if (inv.type === "broker_env") { mem.role = "broker"; mem.opIds = []; }
+    else if (mem.role !== "broker") {
       if (inv.type === "colaborador") mem.role = "colaborador";
       else if (inv.type === "asistente" && mem.role !== "colaborador") mem.role = "asistente";
       mem.opIds = [...new Set([...(mem.opIds || []), ...inv.opIds])];
@@ -306,7 +314,11 @@ async function removeMember(user, envId, email) {
   const e = normEmail(email);
   const mem = (ctx.meta.members || []).find((x) => x.email === e);
   if (!mem) fail(404, "miembro", "No existe ese usuario en el ambiente.");
-  if (mem.role === "broker") fail(400, "miembro", "No se puede quitar al broker del ambiente.");
+  if (mem.role === "broker") {
+    const brokers = (ctx.meta.members || []).filter((x) => x.role === "broker");
+    if (brokers.length <= 1) fail(400, "miembro", "El ambiente tiene que tener al menos un broker.");
+    if (e === user.email) fail(400, "miembro", "No podés quitarte a vos mismo. Pedíselo a otro broker del ambiente.");
+  }
   ctx.meta.members = ctx.meta.members.filter((x) => x.email !== e);
   await setJSON(metaKey(envId), ctx.meta);
   await removeEnvFromUser(e, envId);
@@ -340,7 +352,7 @@ async function adminEnvs() {
     const meta = await getJSON(k); if (!meta) continue;
     const ops = (await listKeys(`envs/${meta.id}/ops/`)).length;
     const by = (r) => (meta.members || []).filter((m) => m.role === r).length;
-    envs.push({ id: meta.id, name: meta.name, brokerName: meta.brokerName, brokerEmail: meta.brokerEmail, created: meta.created, active: meta.active !== false, ops, asistentes: by("asistente"), clientes: by("cliente"), colaboradores: by("colaborador") });
+    envs.push({ id: meta.id, name: meta.name, brokerName: meta.brokerName, brokerEmail: meta.brokerEmail, created: meta.created, active: meta.active !== false, ops, asistentes: by("asistente"), clientes: by("cliente"), colaboradores: by("colaborador"), brokers: (meta.members || []).filter((m) => m.role === "broker").map((m) => ({ email: m.email, name: m.name })) });
   }
   envs.sort((x, y) => y.created - x.created);
   const invites = (await listInvites("brokers")).map(publicInvite).filter((i) => i.status === "pendiente");
@@ -373,6 +385,46 @@ async function adminAssignBroker(envId, inp) {
   if (!mem) { mem = { email, name: u.name, role: "colaborador", opIds: [], added: Date.now() }; meta.members.push(mem); }
   mem.role = "colaborador";
   mem.opIds = [...new Set([...(mem.opIds || []), opId])];
+  await setJSON(metaKey(envId), meta);
+  await addEnvToUser(email, envId, u);
+  return json({ member: mem });
+}
+
+
+/* ---------- ambientes creados por brokers o por el superusuario ---------- */
+async function brokerSomewhere(email) {
+  const u = await getUser(email);
+  for (const envId of (u && u.envIds) || []) {
+    const meta = await getJSON(metaKey(envId));
+    if (meta && (meta.members || []).some((m) => m.email === normEmail(email) && m.role === "broker")) return true;
+  }
+  return false;
+}
+async function createEnv(user, inp) {
+  if (!user.super && !(await brokerSomewhere(user.email))) fail(403, "permiso", "Solo los brokers y el superusuario pueden crear ambientes.");
+  const name = String(inp.name || "").trim().slice(0, 80);
+  if (!name) fail(400, "nombre", "Poné un nombre para el ambiente.");
+  const envId = "e" + rid(12);
+  const meta = { id: envId, name, brokerEmail: user.email, brokerName: user.name, created: Date.now(), active: true, createdBy: user.email,
+    members: [{ email: user.email, name: user.name, role: "broker", opIds: [], added: Date.now() }] };
+  await setJSON(metaKey(envId), meta);
+  await addEnvToUser(user.email, envId, user);
+  return json({ envId, name });
+}
+// Asignar directamente (sin link) a un broker que ya usa la app. El superusuario puede asignar a cualquier usuario registrado.
+async function assignBroker(user, envId, inp) {
+  const ctx = await envContext(user, envId);
+  if (ctx.role !== "broker") fail(403, "permiso", "Solo un broker del ambiente puede sumar brokers.");
+  const email = normEmail(inp.email);
+  if (!email || !email.includes("@")) fail(400, "mail", "Escribí el mail de Google del broker.");
+  const u = await getUser(email);
+  if (!u) fail(404, "usuario", "Ese mail todavía no ingresó a la app. Mandale una invitación con link.");
+  if (!user.super && !(await brokerSomewhere(email))) fail(400, "usuario", "Esa cuenta no es broker en ningún ambiente. Mandale una invitación con link.");
+  const meta = ctx.meta; meta.members = meta.members || [];
+  let mem = meta.members.find((x) => x.email === email);
+  if (mem && mem.role === "broker") fail(400, "usuario", "Ya es broker de este ambiente.");
+  if (!mem) { mem = { email, name: u.name, added: Date.now() }; meta.members.push(mem); }
+  mem.role = "broker"; mem.opIds = []; mem.name = u.name;
   await setJSON(metaKey(envId), meta);
   await addEnvToUser(email, envId, u);
   return json({ member: mem });

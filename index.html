@@ -438,7 +438,7 @@ const ROLES = {
   asistente:{label:"Asistente",icon:"support_agent",desc:"Carga propiedades y arma la agenda"},
   cliente:{label:"Cliente",icon:"person",desc:"Prioriza y agenda sus visitas"}
 };
-const ROLE_INFO = Object.assign({}, ROLES, { colaborador:{label:"Broker invitado",icon:"handshake",desc:"Trabaja una operación puntual como broker"} });
+const ROLE_INFO = Object.assign({}, ROLES, { colaborador:{label:"Broker invitado",icon:"handshake",desc:"Trabaja una operación puntual como broker"}, broker_env:{label:"Broker",icon:"verified_user",desc:"Broker del ambiente"} });
 const STATUS = {
   nueva:{label:"Nueva"}, leida:{label:"Leída"}, por_visitar:{label:"Por visitar"},
   oferta:{label:"Oferta"}, negociacion:{label:"En negociación"}, reservada:{label:"Reservada"}, descartada:{label:"Descartada"}
@@ -660,9 +660,9 @@ function render(){
   if (UI.server === true){
     if (!S.session){ root.innerHTML = srvLoginHTML(); mountGoogle(); return; }
     if (S.session.noAccess){ root.innerHTML = noAccessHTML(); return; }
-    // Sin ambiente elegido no se puede trabajar en operaciones: el superusuario vuelve a su panel.
-    if (!S.session.envId && isSuper() && UI.view !== "brokers"){ UI.view = "brokers"; }
     syncClientId();
+    // Sin ambiente no hay operaciones: se ofrece crear (o elegir) un ambiente.
+    if (!S.session.envId && UI.view !== "brokers"){ root.innerHTML = noEnvHTML(); const f = root.querySelector("[autofocus]"); if (f) f.focus(); return; }
     if (UI.view === "brokers" && isSuper()){ root.innerHTML = shellHTML(op()); return; }
   }
   if (!S.session){ root.innerHTML = loginHTML(); return; }
@@ -683,7 +683,7 @@ function shellHTML(o){
   const r = role();
   const nav = NAV.concat(UI.server===true && isSuper() ? [{id:"brokers",label:"Brokers",icon:"admin_panel_settings"}] : []);
   const navOk = id => o || id==="brokers";
-  const envChip = UI.server===true && (isSuper() || (UI.me && UI.me.envs.length>1)) ? `<button class="opchip" data-action="env-menu" aria-haspopup="menu"><span class="ms">apartment</span><span class="t">${esc(UI.env ? UI.env.name : "Elegí un ambiente")}</span><span class="ms">expand_more</span></button>` : "";
+  const envChip = UI.server===true && (isSuper() || canCreateEnv() || (UI.me && UI.me.envs.length>1)) ? `<button class="opchip" data-action="env-menu" aria-haspopup="menu"><span class="ms">apartment</span><span class="t">${esc(UI.env ? UI.env.name : "Elegí un ambiente")}</span><span class="ms">expand_more</span></button>` : "";
   return `
   <div class="app">
     <nav class="rail" aria-label="Secciones">
@@ -724,6 +724,12 @@ function fabHTML(){
 }
 
 /* ---------- first run ---------- */
+function otherEnvsHTML(){
+  if (UI.server!==true || !UI.me) return "";
+  const envs = (UI.me.envs||[]).filter(e => e.envId !== S.session.envId);
+  if (!envs.length) return "";
+  return `<div class="stack" style="gap:8px"><p style="margin:0">O entrá a otro ambiente:</p>${envs.map(e=>`<button type="button" class="btn btn-outline" data-action="enter-env" data-id="${e.envId}"><span class="ms">apartment</span>${esc(e.name)}</button>`).join("")}</div>`;
+}
 function startHTML(){
   const staff = isStaff();
   return `<div class="login"><form class="login-card" data-form="first-op">
@@ -733,6 +739,7 @@ function startHTML(){
       <div class="field"><label for="fo-client">Primer cliente (opcional)</label><input id="fo-client" placeholder="Ej.: Javier"><span class="help">Podés sumar más clientes y sus horarios desde Operación.</span></div>
       <button class="btn btn-filled" type="submit" style="height:48px"><span class="ms">add</span>Crear operación</button>`
     : `<div><h1 style="font-size:28px">Todavía no hay operaciones</h1><p style="margin-top:6px">Pedile a tu broker el link de tu búsqueda para empezar.</p></div>`}
+    ${otherEnvsHTML()}
     ${isSuper() && UI.server===true ? `<button class="btn btn-outline" type="button" data-action="nav" data-view="brokers" style="align-self:center"><span class="ms">admin_panel_settings</span>Volver al panel de brokers</button>` : ""}
     <button class="btn btn-text" type="button" data-action="logout" style="align-self:center">Ingresar con otro usuario</button>
   </form></div>`;
@@ -1583,14 +1590,12 @@ document.addEventListener("click", async e => {
     case "env-menu": {
       if (menuEl){ closeMenu(); break; }
       const list = isSuper() && UI.admin && UI.admin.envs.length ? UI.admin.envs.map(e=>({envId:e.id, name:e.name, sub:e.brokerName})) : ((UI.me && UI.me.envs) || []).map(e=>({envId:e.envId, name:e.name, sub:(ROLE_INFO[e.role]||ROLES.cliente).label}));
-      openMenu(t, `<div class="lbl">Ambientes</div>${list.map(e=>`<button data-action="enter-env" data-id="${e.envId}"><span class="ms">${UI.env && UI.env.id===e.envId?"check":"apartment"}</span><span>${esc(e.name)}<br><small style="color:var(--ink-3)">${esc(e.sub||"")}</small></span></button>`).join("")}${isSuper()?`<hr><button data-action="nav" data-view="brokers"><span class="ms">admin_panel_settings</span>Panel de brokers</button>`:""}`);
+      openMenu(t, `<div class="lbl">Ambientes</div>${list.map(e=>`<button data-action="enter-env" data-id="${e.envId}"><span class="ms">${UI.env && UI.env.id===e.envId?"check":"apartment"}</span><span>${esc(e.name)}<br><small style="color:var(--ink-3)">${esc(e.sub||"")}</small></span></button>`).join("")}${canCreateEnv()?`<hr><button data-action="new-env"><span class="ms">add_business</span>Nuevo ambiente</button>`:""}${isSuper()?`<button data-action="nav" data-view="brokers"><span class="ms">admin_panel_settings</span>Panel de brokers</button>`:""}`);
       if (isSuper() && !UI.admin) loadAdmin();
       break;
     }
-    case "own-env":
-      textForm("own-env", "Crear mi ambiente de broker", "Nombre de tu inmobiliaria", "", "Crear");
-      { const i = $("#t-val"); if (i) i.placeholder = "Ej.: Balderrama Propiedades"; }
-      break;
+    case "new-env": closeMenu(); newEnvDlg(); break;
+    case "assign-env-broker": assignEnvBrokerDlg(); break;
     case "enter-env": closeMenu(); SRV.opId = null; try { await loadEnv(id, true); } catch(err){ snack(err.message); } break;
     case "toggle-env": {
       const act = t.dataset.active !== "true";
@@ -1710,7 +1715,7 @@ document.addEventListener("submit", async e => {
     if (k === "broker") body.envName = val("#in-env");
     else {
       body.envId = S.session.envId || (UI.env && UI.env.id);
-      if (!body.envId){ msg.textContent = "Primero entrá a un ambiente (panel Brokers → Entrar, o creá tu ambiente de broker)."; return; }
+      if (!body.envId){ msg.textContent = "Primero elegí o creá un ambiente."; return; }
     }
     if (k === "asistente") body.opIds = [...f.querySelectorAll("input[name=in-ops]:checked")].map(x=>x.value);
     if (k === "cliente" || k === "colaborador") body.opId = op().id;
@@ -1820,13 +1825,22 @@ document.addEventListener("submit", async e => {
     const n = val("#t-val"); const nop = {id:uid("op"), name:n, created:ymd(today()), clients:[], props:[], visits:[], notices:[]};
     S.ops.push(nop); S.currentOp = nop.id; UI.view = "operacion"; UI.weekStart = null; UI.team = null; if (UI.server===true){ SRV.opId = nop.id; saveSrv(); } closeDlg(); commit(UI.server===true ? "Operación creada. Invitá a tus clientes desde acá" : "Operación creada. Copiá el link para el cliente"); return;
   }
-  if (kind === "own-env"){
+  if (kind === "new-env"){
+    const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
     try {
-      const r = await api("/admin/envs", {method:"POST", body:{name: val("#t-val")}});
+      const r = await api("/envs", {method:"POST", body:{name: val("#ne-name")}});
       UI.me = await api("/me"); UI.admin = null; closeDlg(); SRV.opId = null;
       await loadEnv(r.envId, false);
-      snack("Listo, ya tenés tu ambiente. Creá tu primera operación.");
-    } catch(err){ snack(err.message); }
+      snack(`Ambiente «${r.name}» creado. Creá su primera operación.`);
+    } catch(err){ $("#ne-msg").textContent = err.message; btn.disabled = false; }
+    return;
+  }
+  if (kind === "assign-env-broker"){
+    const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+    try {
+      const r = await api(`/env/${encodeURIComponent(S.session.envId)}/brokers`, {method:"POST", body:{email: val("#ab-email")}});
+      closeDlg(); snack(`${r.member.name} ya es broker de ${UI.env ? UI.env.name : "este ambiente"}`); loadTeam();
+    } catch(err){ $("#ab-msg").textContent = err.message; btn.disabled = false; }
     return;
   }
   if (kind === "rename-op"){ o.name = val("#t-val"); closeDlg(); commit("Nombre actualizado"); return; }
@@ -1914,7 +1928,7 @@ window.__visitasLogin = (credential) => onGoogleCredential({ credential }); // u
 function srvLoginHTML(){
   const cfg = UI.cfg || {}, ready = cfg.ready || {};
   const inv = UI.inviteInfo;
-  const ROLE_TXT = { broker:"como broker, con tu propio ambiente", asistente:"como asistente", cliente:"a la búsqueda", colaborador:"como broker invitado" };
+  const ROLE_TXT = { broker:"como broker, con tu propio ambiente", broker_env:"como broker", asistente:"como asistente", cliente:"a la búsqueda", colaborador:"como broker invitado" };
   let invHTML = "";
   if (UI.inviteError) invHTML = `<div class="note" style="background:var(--red-soft)"><span class="ms" style="color:var(--red)">link_off</span>${esc(UI.inviteError)}</div>`;
   else if (inv && inv.status !== "pendiente") invHTML = `<div class="note" style="background:var(--amber-soft)"><span class="ms" style="color:var(--amber)">link_off</span>Esta invitación está ${esc(inv.status)}. Si ya la usaste, ingresá con la misma cuenta de Google. Si no, pedí un link nuevo.</div>`;
@@ -1961,7 +1975,7 @@ async function bootServer(){
     }
     S.session = Object.assign({ role:"cliente" }, base);
     await loadEnv(envId);
-    if (UI.welcome){ snack(UI.welcome==="broker" ? "¡Listo! Ya tenés tu ambiente. Creá tu primera operación." : UI.welcome==="asistente" ? "¡Listo! Ya sos asistente en " + (UI.env ? UI.env.name : "el ambiente") : "¡Listo! Ya podés ver las propiedades de tu búsqueda."); UI.welcome = null; }
+    if (UI.welcome){ snack(UI.welcome==="broker" ? "¡Listo! Ya tenés tu ambiente. Creá tu primera operación." : UI.welcome==="broker_env" ? "¡Listo! Ya sos broker en " + (UI.env ? UI.env.name : "el ambiente") : UI.welcome==="asistente" ? "¡Listo! Ya sos asistente en " + (UI.env ? UI.env.name : "el ambiente") : "¡Listo! Ya podés ver las propiedades de tu búsqueda."); UI.welcome = null; }
   } catch(e){
     if (e.status !== 401){ S.session = null; render(); snack(e.message); }
   }
@@ -2075,8 +2089,8 @@ async function uploadPhoto(dataUrl){
 const inviteUrl = (token) => location.origin + "/?invite=" + encodeURIComponent(token);
 function inviteDlg(kind, preset){
   const o = op();
-  const titles = { broker:"Invitar broker", asistente:"Invitar asistente", cliente: isStaff() ? "Invitar cliente" : "Invitar a otra persona a tu búsqueda", colaborador:"Invitar a otro broker a esta operación" };
-  const sub = { broker:"Va a tener su propio ambiente, donde es el administrador.", asistente:"Va a trabajar solo en las operaciones que le asignes.", cliente: `Va a ver la búsqueda <b>${esc(o ? o.name : "")}</b> con los mismos permisos que ${isStaff() ? "el cliente" : "vos"}.`, colaborador:`Va a trabajar la operación <b>${esc(o ? o.name : "")}</b> como broker: aprobar propiedades, confirmar visitas e invitar clientes. No ve el resto de tus operaciones ni tu equipo.` };
+  const titles = { broker_env:"Invitar broker a este ambiente", broker:"Invitar broker", asistente:"Invitar asistente", cliente: isStaff() ? "Invitar cliente" : "Invitar a otra persona a tu búsqueda", colaborador:"Invitar a otro broker a esta operación" };
+  const sub = { broker_env:`Va a ser broker de <b>${esc(UI.env ? UI.env.name : "este ambiente")}</b>, con los mismos permisos que vos: ve todas las operaciones, aprueba, invita asistentes, clientes y otros brokers.`, broker:"Va a tener su propio ambiente, donde es el administrador.", asistente:"Va a trabajar solo en las operaciones que le asignes.", cliente: `Va a ver la búsqueda <b>${esc(o ? o.name : "")}</b> con los mismos permisos que ${isStaff() ? "el cliente" : "vos"}.`, colaborador:`Va a trabajar la operación <b>${esc(o ? o.name : "")}</b> como broker: aprobar propiedades, confirmar visitas e invitar clientes. No ve el resto de tus operaciones ni tu equipo.` };
   openDlg(`<form class="dlg" data-form="invite" data-kind="${kind}">${head(titles[kind])}<div class="dlg-body">
     <p style="margin:0 0 14px;color:var(--ink-2)">${sub[kind]} Le vas a compartir un link para que ingrese con su cuenta de Google.</p>
     <div class="form">
@@ -2092,6 +2106,7 @@ function showInviteLink(inv){
   const who = inv.name ? inv.name + ", t" : "T";
   const msg = inv.type === "cliente"
     ? `Hola ${inv.name||""}! Te comparto tu búsqueda de propiedades en ${inv.envName}. Entrá con tu cuenta de Google desde este link: ${url}`
+    : inv.type === "broker_env" ? `${who}e invito a trabajar como broker en ${inv.envName} en Visitas Inmobiliarias. Entrá con tu cuenta de Google desde este link: ${url}`
     : inv.type === "colaborador" ? `${who}e invito a trabajar juntos una operación de ${inv.envName} en Visitas Inmobiliarias. Entrá con tu cuenta de Google desde este link: ${url}`
     : `${who}e invito a ${inv.envName} en Visitas Inmobiliarias como ${ROLES[inv.type].label.toLowerCase()}. Entrá con tu cuenta de Google desde este link: ${url}`;
   openDlg(`<div class="dlg">${head("Link de invitación")}<div class="dlg-body">
@@ -2122,11 +2137,11 @@ function srvOpPanelsHTML(o){
   if (!broker) return access;
   const colabs = T.members.filter(m => m.role==="colaborador" && (m.opIds||[]).includes(o.id));
   const colabInv = T.invites.filter(i => i.type==="colaborador" && (i.opIds||[]).includes(o.id));
-  const colabPanel = `<section class="panel"><h2>Brokers invitados</h2><p class="hint">Otros brokers que trabajan esta operación con vos. No ven el resto de tu ambiente.</p>
+  const colabPanel = `<section class="panel"><h2>Brokers solo en esta operación</h2><p class="hint">Brokers que trabajan únicamente esta operación. No ven el resto del ambiente.</p>
     ${colabs.map(m=>`<div class="client-row"><span class="avatar av-broker"><span class="ms fill" style="font-size:18px">handshake</span></span><div class="info"><b>${esc(m.name)}</b><small>${esc(m.email)}</small></div><button class="icon-btn" data-action="remove-colab" data-id="${esc(m.email)}" title="Quitar de esta operación" aria-label="Quitar de esta operación"><span class="ms">person_remove</span></button></div>`).join("")}
     ${colabInv.map(invRow).join("")}
     ${!T.loading && !colabs.length && !colabInv.length ? '<small style="color:var(--ink-3)">No hay otros brokers en esta operación.</small>' : ""}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-tonal" data-action="invite" data-kind="colaborador"><span class="ms">handshake</span>Invitar broker a esta operación</button>${isSuper()?`<button class="btn btn-filled" data-action="assign-broker"><span class="ms">admin_panel_settings</span>Asignar broker existente</button>`:""}</div></section>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-tonal" data-action="invite" data-kind="colaborador"><span class="ms">handshake</span>Invitar broker a esta operación</button>${isSuper()?`<button class="btn btn-filled" data-action="assign-broker"><span class="ms">admin_panel_settings</span>Asignar a esta operación</button>`:""}</div></section>`;
   const asis = T.members.filter(m => m.role==="asistente");
   const asisInv = T.invites.filter(i => i.type==="asistente");
   const team = `<section class="panel"><h2>Asistentes</h2><p class="hint">Cada asistente ve solo las operaciones que le asignes.</p>
@@ -2136,7 +2151,51 @@ function srvOpPanelsHTML(o){
     ${asisInv.map(invRow).join("")}
     ${!T.loading && !asis.length && !asisInv.length ? '<small style="color:var(--ink-3)">Todavía no tenés asistentes.</small>' : ""}
     <button class="btn btn-tonal" data-action="invite" data-kind="asistente" style="margin-top:12px"><span class="ms">person_add</span>Invitar asistente</button></section>`;
-  return access + colabPanel + team;
+  const brokers = T.members.filter(m => m.role==="broker");
+  const brokerInv = T.invites.filter(i => i.type==="broker_env");
+  const brokersPanel = `<section class="panel"><h2>Brokers del ambiente</h2><p class="hint">Todos los brokers de ${esc(UI.env ? UI.env.name : "este ambiente")} tienen los mismos permisos y ven todas sus operaciones.</p>
+    ${brokers.map(m=>`<div class="client-row"><span class="avatar av-broker">${esc(initials(m.name))}</span><div class="info"><b>${esc(m.name)}${m.email===S.session.email?" (vos)":""}</b><small>${esc(m.email)}</small></div>${m.email!==S.session.email && brokers.length>1 ? `<button class="icon-btn" data-action="remove-member" data-id="${esc(m.email)}" title="Quitar del ambiente" aria-label="Quitar del ambiente"><span class="ms">person_remove</span></button>` : ""}</div>`).join("")}
+    ${brokerInv.map(invRow).join("")}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-tonal" data-action="invite" data-kind="broker_env"><span class="ms">person_add</span>Invitar broker</button><button class="btn btn-outline" data-action="assign-env-broker"><span class="ms">how_to_reg</span>Asignar broker existente</button></div></section>`;
+  return access + brokersPanel + colabPanel + team;
+}
+
+/* ---------- ambientes ---------- */
+function canCreateEnv(){ return UI.server === true && (isSuper() || ((UI.me && UI.me.envs) || []).some(e => e.role === "broker")); }
+function noEnvHTML(){
+  const can = canCreateEnv();
+  const envs = (UI.me && UI.me.envs) || [];
+  return `<div class="login"><form class="login-card" data-form="new-env">
+    <div class="logo"><span class="ms fill">add_business</span></div>
+    <div><h1 style="font-size:28px">${can ? "Creá un ambiente" : "Elegí un ambiente"}</h1><p style="margin-top:6px">Un ambiente es el espacio de trabajo de una inmobiliaria o equipo: ahí viven sus operaciones, brokers, asistentes y clientes.${isSuper() ? " Como superusuario, al crearlo quedás como broker de ese ambiente y después podés sumar a otros brokers." : ""}</p></div>
+    ${can ? `<div class="field"><label for="ne-name">Nombre del ambiente</label><input id="ne-name" required autofocus placeholder="Ej.: Balderrama Propiedades"></div>
+      <div id="ne-msg" class="found" style="color:var(--red)"></div>
+      <button class="btn btn-filled" type="submit" style="height:48px"><span class="ms">add</span>Crear ambiente</button>` : ""}
+    ${envs.length ? `<div class="stack" style="gap:8px">${envs.map(e=>`<button type="button" class="btn btn-outline" data-action="enter-env" data-id="${e.envId}"><span class="ms">apartment</span>${esc(e.name)}</button>`).join("")}</div>` : ""}
+    ${isSuper() ? `<button class="btn btn-text" type="button" data-action="nav" data-view="brokers" style="align-self:center"><span class="ms">admin_panel_settings</span>Ir al panel de brokers</button>` : ""}
+    <button class="btn btn-text" type="button" data-action="logout" style="align-self:center">Ingresar con otra cuenta</button>
+  </form></div>`;
+}
+function newEnvDlg(){
+  openDlg(`<form class="dlg" data-form="new-env">${head("Nuevo ambiente")}<div class="dlg-body">
+    <p style="margin:0 0 14px;color:var(--ink-2)">Vas a quedar como broker del ambiente nuevo. Después podés invitar o asignar a otros brokers, asistentes y clientes.</p>
+    <div class="form"><div class="field"><label for="ne-name">Nombre del ambiente</label><input id="ne-name" required autofocus placeholder="Ej.: Balderrama Propiedades"></div></div>
+    <div id="ne-msg" class="found" style="color:var(--red)"></div>
+  </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit"><span class="ms">add</span>Crear ambiente</button></div></form>`);
+}
+async function assignEnvBrokerDlg(){
+  let known = [];
+  if (isSuper()){
+    try { UI.admin = await api("/admin/envs"); } catch(e){}
+    const mine = new Set(((UI.team && UI.team.members) || []).filter(m=>m.role==="broker").map(m=>m.email));
+    const seen = new Set();
+    for (const e of (UI.admin && UI.admin.envs) || []) for (const b of (e.brokers || [{email:e.brokerEmail, name:e.brokerName}])) if (b.email && !mine.has(b.email) && !seen.has(b.email)){ seen.add(b.email); known.push(b); }
+  }
+  openDlg(`<form class="dlg" data-form="assign-env-broker">${head("Asignar broker existente")}<div class="dlg-body">
+    <p style="margin:0 0 14px;color:var(--ink-2)">Suma al instante, sin link, a alguien que ya usa la app como broker. Va a ver todas las operaciones de <b>${esc(UI.env ? UI.env.name : "este ambiente")}</b>.</p>
+    <div class="form"><div class="field"><label for="ab-email">Mail de Google del broker</label><input id="ab-email" type="email" required autofocus list="ab-known" placeholder="nombre@gmail.com">${known.length ? `<datalist id="ab-known">${known.map(b=>`<option value="${esc(b.email)}">${esc(b.name)}</option>`).join("")}</datalist><span class="help">Empezá a escribir para ver los brokers registrados.</span>` : `<span class="help">Si todavía no usa la app, usá «Invitar broker» para mandarle un link.</span>`}</div></div>
+    <div id="ab-msg" class="found" style="color:var(--red)"></div>
+  </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit"><span class="ms">how_to_reg</span>Asignar</button></div></form>`);
 }
 
 /* ---------- panel de superusuario ---------- */
@@ -2147,12 +2206,10 @@ async function loadAdmin(){
 function brokersHTML(){
   if (!UI.admin){ loadAdmin(); UI.admin = { loading:true, envs:[], invites:[] }; }
   const A = UI.admin;
-  const ownEnv = ((UI.me && UI.me.envs) || []).find(e => e.role === "broker");
   const fmtD = (t) => { const d = new Date(t); return d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear(); };
   return `
   <div class="page-head"><div><h1>Brokers</h1><div class="sub">Cada broker tiene su propio ambiente, donde administra asistentes, clientes y operaciones.</div></div>
-    <div class="actions">${ownEnv ? `<button class="btn btn-outline" data-action="enter-env" data-id="${ownEnv.envId}"><span class="ms">apartment</span>Ir a mi ambiente</button>` : `<button class="btn btn-outline" data-action="own-env"><span class="ms">add_business</span>Crear mi ambiente de broker</button>`}<button class="btn btn-filled" data-action="invite" data-kind="broker"><span class="ms">person_add</span>Invitar broker</button></div></div>
-  ${!ownEnv ? `<div class="note" style="margin-bottom:18px"><span class="ms">info</span><span>Para cargar propiedades y operaciones propias, creá tu ambiente de broker. También podés tocar <b>Entrar</b> en el ambiente de un broker para trabajar en el suyo.</span></div>` : ""}
+    <div class="actions"><button class="btn btn-outline" data-action="new-env"><span class="ms">add_business</span>Nuevo ambiente</button><button class="btn btn-filled" data-action="invite" data-kind="broker"><span class="ms">person_add</span>Invitar broker</button></div></div>
   ${A.error ? `<div class="note" style="background:var(--red-soft)"><span class="ms" style="color:var(--red)">error</span>${esc(A.error)}</div>` : ""}
   <div class="summary">
     <div class="stat"><b>${A.envs.length}</b><span>Ambientes</span></div>
@@ -2163,7 +2220,7 @@ function brokersHTML(){
   ${A.invites.length ? `<div class="section-title" style="margin-top:0"><h2>Invitaciones pendientes</h2></div><div class="stack" style="margin-bottom:22px">${A.invites.map(i=>`<div class="panel" style="display:flex;gap:12px;align-items:center;padding:14px 18px"><span class="avatar av-broker" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div style="flex:1;min-width:0"><b>${esc(i.name||"Sin nombre")}</b> · ${esc(i.envName)}<br><small style="color:var(--ink-3)">Vence el ${fmtD(i.expires)}</small></div><button class="btn btn-tonal btn-sm" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}"><span class="ms">content_copy</span>Copiar link</button><button class="btn btn-text btn-sm" data-action="revoke-invite" data-id="${esc(i.token)}">Anular</button></div>`).join("")}</div>` : ""}
   <div class="section-title" style="margin-top:0"><h2>Ambientes</h2><span class="count num">${A.envs.length}</span></div>
   ${A.loading ? '<div class="empty">Cargando…</div>' : A.envs.length ? `<div class="grid">${A.envs.map(e=>`<article class="panel env-card ${e.active?"":"off"}">
-      <div style="display:flex;gap:10px;align-items:center"><span class="avatar av-broker">${esc(initials(e.brokerName))}</span><div style="min-width:0"><h3>${esc(e.name)}</h3><small style="color:var(--ink-3)">${esc(e.brokerName)} · ${esc(e.brokerEmail)}</small></div></div>
+      <div style="display:flex;gap:10px;align-items:center"><span class="avatar av-broker">${esc(initials(e.brokerName))}</span><div style="min-width:0"><h3>${esc(e.name)}</h3><small style="color:var(--ink-3)">${(e.brokers && e.brokers.length ? e.brokers.map(x=>esc(x.name)).join(", ") : esc(e.brokerName))}</small></div></div>
       <dl class="kv" style="margin:12px 0;font-size:13px"><dt>Operaciones</dt><dd>${e.ops}</dd><dt>Asistentes</dt><dd>${e.asistentes}</dd><dt>Clientes</dt><dd>${e.clientes}</dd>${e.colaboradores?`<dt>Brokers invitados</dt><dd>${e.colaboradores}</dd>`:""}<dt>Desde</dt><dd>${fmtD(e.created)}</dd></dl>
       ${e.active ? "" : '<span class="status s-rechazada" style="margin-bottom:10px">Desactivado</span>'}
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-filled btn-sm" data-action="enter-env" data-id="${e.id}"><span class="ms">login</span>Entrar</button><button class="btn btn-text btn-sm" data-action="toggle-env" data-id="${e.id}" data-active="${e.active}">${e.active ? "Desactivar" : "Activar"}</button></div>
