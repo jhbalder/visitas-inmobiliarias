@@ -2,7 +2,7 @@
 import {
   json, HttpError, fail, rid, validId, normEmail, getJSON, setJSON, del, listKeys, db,
   signSession, requireUser, verifyGoogle, isSuperEmail, superEmails, getUser, saveUser, addEnvToUser, removeEnvFromUser,
-  metaKey, opKey, envContext, canOp, isStaffRole, viewFor, mergeClient, mergeAssistant
+  metaKey, opKey, envContext, canOp, isStaffRole, canCreateOps, viewFor, mergeClient, mergeAssistant
 } from "../lib/core.mjs";
 
 export const config = {
@@ -49,7 +49,8 @@ export default async (req) => {
     if (a === "admin") {
       if (!user.super) fail(403, "solo_admin", "Solo el superusuario puede hacer esto.");
       if (b === "envs" && !c && m === "GET") return await adminEnvs();
-      if (b === "envs" && c && m === "PUT") return await adminUpdateEnv(c, await body(req));
+      if (b === "envs" && c && !d && m === "PUT") return await adminUpdateEnv(c, await body(req));
+      if (b === "envs" && c && d === "assign" && m === "POST") return await adminAssignBroker(c, await body(req));
     }
     fail(404, "no_encontrado", "Ruta no encontrada.");
   } catch (e) {
@@ -90,7 +91,7 @@ const inviteKey = (token) => {
   if (!validId(scope) || !/^[A-Za-z0-9_-]+~[A-Za-z0-9]{16,}$/.test(token)) fail(400, "invitacion", "El link de invitación no es válido.");
   return `invites/${scope}/${token}`;
 };
-const ROLE_LABEL = { broker: "Broker", asistente: "Asistente", cliente: "Cliente" };
+const ROLE_LABEL = { broker: "Broker", asistente: "Asistente", cliente: "Cliente", colaborador: "Broker invitado" };
 
 async function createInvite(user, inp) {
   const type = inp.type;
@@ -100,7 +101,7 @@ async function createInvite(user, inp) {
     if (!user.super) fail(403, "solo_admin", "Solo el superusuario invita brokers.");
     scope = "brokers";
     envName = String(inp.envName || "").trim().slice(0, 80) || (name ? "Inmobiliaria " + name : "Nueva inmobiliaria");
-  } else if (type === "asistente" || type === "cliente") {
+  } else if (type === "asistente" || type === "cliente" || type === "colaborador") {
     envId = inp.envId;
     const ctx = await envContext(user, envId);
     envName = ctx.meta.name;
@@ -113,6 +114,7 @@ async function createInvite(user, inp) {
       const opId = inp.opId;
       if (!existing.has(opId)) fail(400, "operacion", "La operación no existe.");
       if (!canOp(ctx, opId)) fail(403, "permiso", "No tenés acceso a esa operación.");
+      if (type === "colaborador" && ctx.role !== "broker") fail(403, "permiso", "Solo el broker dueño del ambiente invita a otros brokers.");
       opIds = [opId];
     }
   } else fail(400, "tipo", "Tipo de invitación inválido.");
@@ -130,7 +132,7 @@ async function inviteInfo(token) {
   const inv = await getJSON(inviteKey(token));
   if (!inv) fail(404, "invitacion", "La invitación no existe.");
   const p = publicInvite(inv);
-  if (inv.type === "cliente" && inv.envId && inv.opIds[0]) {
+  if ((inv.type === "cliente" || inv.type === "colaborador") && inv.envId && inv.opIds[0]) {
     const op = await getJSON(opKey(inv.envId, inv.opIds[0]));
     p.opName = op ? op.name : null;
   }
@@ -160,7 +162,8 @@ async function acceptInvite(user, token) {
     let mem = meta.members.find((x) => x.email === user.email);
     if (!mem) { mem = { email: user.email, name: user.name, role: inv.type, opIds: [], added: Date.now() }; meta.members.push(mem); }
     if (mem.role !== "broker") {
-      if (inv.type === "asistente") mem.role = "asistente";
+      if (inv.type === "colaborador") mem.role = "colaborador";
+      else if (inv.type === "asistente" && mem.role !== "colaborador") mem.role = "asistente";
       mem.opIds = [...new Set([...(mem.opIds || []), ...inv.opIds])];
     }
     mem.name = user.name;
@@ -230,7 +233,7 @@ async function putOp(user, envId, opId, inp) {
   for (const k of ["props", "visits", "clients", "notices"]) if (inc[k] != null && !Array.isArray(inc[k])) fail(400, "operacion", "Datos inválidos.");
   const stored = await getJSON(opKey(envId, opId));
   if (!stored) {
-    if (!isStaffRole(ctx.role)) fail(403, "permiso", "Solo el broker o el asistente crean operaciones.");
+    if (!canCreateOps(ctx.role)) fail(403, "permiso", "Solo el broker dueño del ambiente o su asistente crean operaciones.");
   } else {
     if (!canOp(ctx, opId)) fail(403, "permiso", "No tenés acceso a esta operación.");
     if ((inp.baseV || 0) !== (stored._v || 0)) {
@@ -271,8 +274,14 @@ async function getTeam(user, envId) {
   const ctx = await envContext(user, envId);
   const invites = (await listInvites(envId)).map(publicInvite).filter((i) => i.status === "pendiente");
   const members = (ctx.meta.members || []).map((m) => ({ email: m.email, name: m.name, role: m.role, opIds: m.opIds || [], added: m.added }));
+  if (ctx.role === "broker") return json({ members, invites });
   if (isStaffRole(ctx.role)) {
-    return json({ members, invites: ctx.role === "broker" ? invites : invites.filter((i) => i.type === "cliente" && i.opIds.some((x) => canOp(ctx, x))) });
+    const mine = new Set(ctx.opIds);
+    const shared = (m) => m.role === "broker" || m.opIds.some((x) => mine.has(x));
+    return json({
+      members: (ctx.role === "colaborador" ? members.filter(shared) : members).map((m) => ({ ...m, opIds: m.role === "broker" ? [] : m.opIds.filter((x) => ctx.role === "asistente" || mine.has(x)) })),
+      invites: invites.filter((i) => i.type === "cliente" && i.opIds.some((x) => canOp(ctx, x)))
+    });
   }
   const mine = new Set(ctx.opIds);
   return json({
@@ -331,7 +340,7 @@ async function adminEnvs() {
     const meta = await getJSON(k); if (!meta) continue;
     const ops = (await listKeys(`envs/${meta.id}/ops/`)).length;
     const by = (r) => (meta.members || []).filter((m) => m.role === r).length;
-    envs.push({ id: meta.id, name: meta.name, brokerName: meta.brokerName, brokerEmail: meta.brokerEmail, created: meta.created, active: meta.active !== false, ops, asistentes: by("asistente"), clientes: by("cliente") });
+    envs.push({ id: meta.id, name: meta.name, brokerName: meta.brokerName, brokerEmail: meta.brokerEmail, created: meta.created, active: meta.active !== false, ops, asistentes: by("asistente"), clientes: by("cliente"), colaboradores: by("colaborador") });
   }
   envs.sort((x, y) => y.created - x.created);
   const invites = (await listInvites("brokers")).map(publicInvite).filter((i) => i.status === "pendiente");
@@ -344,4 +353,27 @@ async function adminUpdateEnv(envId, inp) {
   if (inp.name) meta.name = String(inp.name).trim().slice(0, 80);
   await setJSON(metaKey(envId), meta);
   return json({ ok: true });
+}
+
+// El superusuario asigna un broker existente a una operación de otro ambiente (queda como "broker invitado").
+async function adminAssignBroker(envId, inp) {
+  const meta = await getJSON(metaKey(envId));
+  if (!meta) fail(404, "ambiente", "El ambiente no existe.");
+  const opId = inp.opId;
+  if (!validId(opId) || !(await getJSON(opKey(envId, opId)))) fail(404, "operacion", "La operación no existe.");
+  const email = normEmail(inp.email);
+  const u = await getUser(email);
+  if (!u) fail(404, "usuario", "Ese broker todavía no ingresó a la app.");
+  let isBrokerSomewhere = false;
+  for (const k of await listKeys("envs/")) { if (!k.endsWith("/meta")) continue; const mm = await getJSON(k); if (mm && mm.brokerEmail === email) { isBrokerSomewhere = true; break; } }
+  if (!isBrokerSomewhere) fail(400, "usuario", "Esa cuenta no es broker de ningún ambiente.");
+  meta.members = meta.members || [];
+  let mem = meta.members.find((x) => x.email === email);
+  if (mem && mem.role === "broker") fail(400, "usuario", "Ese broker ya es el dueño de este ambiente.");
+  if (!mem) { mem = { email, name: u.name, role: "colaborador", opIds: [], added: Date.now() }; meta.members.push(mem); }
+  mem.role = "colaborador";
+  mem.opIds = [...new Set([...(mem.opIds || []), opId])];
+  await setJSON(metaKey(envId), meta);
+  await addEnvToUser(email, envId, u);
+  return json({ member: mem });
 }

@@ -102,7 +102,8 @@ export async function envContext(user, envId) {
   return { meta, role: m.role, opIds: m.opIds || [], member: m };
 }
 export const canOp = (ctx, opId) => ctx.role === "broker" || (ctx.opIds || []).includes(opId);
-export const isStaffRole = (r) => r === "broker" || r === "asistente";
+export const isStaffRole = (r) => r === "broker" || r === "asistente" || r === "colaborador";
+export const canCreateOps = (r) => r === "broker" || r === "asistente";
 
 /* ---------- vistas y reglas de escritura por rol ---------- */
 export function clientView(op) {

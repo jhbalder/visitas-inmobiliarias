@@ -7,6 +7,7 @@ App para coordinar propiedades, visitas y ofertas entre brokers, asistentes y cl
 - **Superusuario**: entra con su cuenta de Google (su mail se configura en Netlify). Administra la lista de brokers, los invita, entra a cualquier ambiente y puede cambiar de rol para ver la app como Broker, Asistente o Cliente.
 - **Broker**: recibe un link único del superusuario. Al ingresar con Google se crea **su ambiente**, donde es el administrador. Crea operaciones, aprueba propiedades y confirma visitas.
 - **Asistente**: solo lo crea el broker, con un link único. Puede haber varios asistentes por broker. Cada uno ve **solo las operaciones que el broker le asigna** (se cambian desde Operación → Asistentes). Si un asistente crea una operación, queda asignado a ella.
+- **Broker invitado**: el broker dueño del ambiente puede sumar a otro broker a **una operación puntual** (Operación → Brokers invitados). Trabaja esa operación como broker (aprueba propiedades, confirma visitas, invita clientes), pero no ve el resto del ambiente, no crea operaciones ni maneja el equipo. Si ese broker tiene su propio ambiente, cambia entre los dos desde el selector de arriba. El superusuario también puede **asignar un broker existente** a una operación sin link: entra al ambiente, elige la operación y va a Operación → Brokers invitados → **Asignar broker existente**.
 - **Cliente**: lo invita el broker o un asistente, con un link para una operación. Ve solo esa búsqueda y solo las propiedades aprobadas (sin el teléfono del anunciante).
 - **Cliente invitado por otro cliente**: un cliente puede invitar a otra persona (pareja, familiar) a **su misma búsqueda**, con los mismos permisos.
 
@@ -18,6 +19,8 @@ Cada link de invitación sirve para **una sola cuenta de Google** y vence en **1
 - `netlify/functions/api.mjs`: sesiones con Google, ambientes, invitaciones, operaciones, equipo, fotos y panel de superusuario.
 - `netlify/functions/leer-aviso.mjs`: lee avisos de Zonaprop, RE/MAX, Argenprop y Mercado Libre.
 - `netlify/lib/core.mjs`: reglas de permisos y utilidades compartidas.
+- `netlify/lib/parsers.mjs`: lectores de avisos por portal (los usa el servidor y el favorito).
+- `favorito/`: código del favorito «Enviar a Visitas» y su compilador.
 - `netlify.toml` y `package.json`: configuración. Los datos se guardan en **Netlify Blobs** (incluido en Netlify, no hace falta otra cuenta).
 
 ## 1. Crear el acceso de Google (una sola vez)
@@ -55,6 +58,33 @@ Después de cargarlas: **Deploys → Trigger deploy → Deploy project**.
 4. Desde **Operación**, el broker invita asistentes (eligiendo qué operaciones ven) y clientes.
 
 Para revisar la configuración: `https://TU-SITIO.netlify.app/api/config` tiene que mostrar `"google":true,"secret":true,"superuser":true`.
+
+## Lectura de avisos por portal
+
+Cada portal tiene su propia lectura (`netlify/functions/leer-aviso.mjs`):
+
+- **Mercado Libre**: API oficial (con `ML_CLIENT_ID`/`ML_CLIENT_SECRET`) o la página pública.
+- **RE/MAX**: API pública del sitio (`api-ar.redremax.com/.../listings/findBySlug`). Trae precio, expensas, m², ambientes, baños, cocheras, pisos, dirección, barrio, teléfono del agente y fotos en alta. Si la API no responde, lee la página.
+- **Argenprop**: precio, lista de características ("Cant. Ambientes", "Sup. Total", "Cant. Cocheras", "Expensas"), dirección y la galería completa de fotos (`/aviso/gallerypartial`), descartando las de avisos similares.
+- **Zonaprop**: variables internas de la página (`mainFeatures`, `pricesData`, `expenses`, `address`, `location`, `pictures`, `whatsApp`). Zonaprop suele bloquear servidores: si pasa, configurá `SCRAPINGBEE_API_KEY` o pegá el texto del aviso.
+
+Si un aviso no se lee bien, en la app tocá **¿Faltan datos? Copiar diagnóstico** y pasáselo a quien mantenga la app.
+
+## Favorito «Enviar a Visitas»
+
+Sirve para traer un aviso desde el navegador de la persona, aunque el portal bloquee la lectura desde el servidor (típico de Zonaprop). Funciona con Zonaprop, Argenprop, RE/MAX y Mercado Libre, en computadora.
+
+- **Instalar:** en la app, **Operación → Favorito «Enviar a Visitas» → Instalar el favorito** (o desde "Agregar propiedad"). Se arrastra el botón verde a la barra de favoritos. Cada persona lo instala una vez en cada navegador.
+- **Usar:** abrir la página del aviso en el portal y tocar el favorito. Se abre Visitas con el formulario completo (datos y fotos), se elige la operación y se guarda.
+- Los datos viajan en la dirección de la app después del `#`, que no se envía a ningún servidor.
+- El favorito queda atado a la dirección desde donde se instaló. Si cambiás el dominio del sitio, hay que reinstalarlo.
+
+**Para modificar el favorito** (solo si cambian los lectores en `netlify/lib/parsers.mjs` o `favorito/enviar-a-visitas.src.mjs`):
+```
+npm install --no-save esbuild@0.24.2
+node favorito/build.mjs
+```
+Esto regenera `favorito/enviar-a-visitas.min.js` y lo inserta en `index.html`. Después hay que reinstalar el favorito en los navegadores.
 
 ## Guardado y trabajo en equipo
 

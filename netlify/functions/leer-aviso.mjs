@@ -16,10 +16,10 @@ const PORTALS = [
   { domain: "mercadolibre.com.ar", name: "Mercado Libre" }
 ];
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
-const PHOTO_HOSTS = /(zonapropcdn|zonaprop|argenprop|sosiva451|remax|mlstatic|cloudfront|redremax|imgix|amazonaws)/i;
-const MAX_PHOTOS = 15;
 
 import { requireUser, HttpError } from "../lib/core.mjs";
+import { PHOTO_HOSTS, MAX_PHOTOS, REMAX_CDN, parseHtml, mapRemaxApi, parseRemax, parseArgenprop, parseZonaprop, parseMercadoLibre, num, numOrText, clean } from "../lib/parsers.mjs";
+export { parseHtml, mapRemaxApi, parseRemax, parseArgenprop, parseZonaprop, parseMercadoLibre };
 
 export const config = { path: "/api/leer-aviso" };
 
@@ -41,7 +41,13 @@ export default async (req) => {
   try {
     let result = null;
     if (portal.domain === "mercadolibre.com.ar") result = await fromMercadoLibreApi(t.href);
+    else if (portal.domain === "remax.com.ar") result = await fromRemax(t.href);
+    else if (portal.domain === "argenprop.com") result = await fromArgenprop(t.href);
+    else if (portal.domain === "zonaprop.com.ar") result = parseZonaprop(await fetchHtml(t.href), t.href);
+    if (!result && portal.domain === "mercadolibre.com.ar") result = parseMercadoLibre(await fetchHtml(t.href), t.href);
     if (!result) result = await fromHtml(t.href);
+    // Teléfono: solo si parece un número real (8 dígitos o más)
+    if (result.fields && result.fields.phone && String(result.fields.phone).replace(/\D/g, "").length < 8) delete result.fields.phone;
     result.portal = portal.name;
     result.url = t.href;
     return json(result, 200, { "cache-control": "public, max-age=900" });
@@ -113,7 +119,8 @@ async function fetchHtml(href) {
     });
     status = r.status;
     html = await r.text();
-    blocked = !r.ok || /cf-chl|challenge-platform|Just a moment|captcha/i.test(html.slice(0, 5000));
+    // Solo se considera bloqueo una página de verificación real (Cloudflare / "Just a moment"), no la mención de reCAPTCHA en el código.
+    blocked = !r.ok || /<title>\s*(Just a moment|Attention Required|Un momento)|cf-chl-|challenge-platform|cf-turnstile/i.test(html.slice(0, 20000)) || html.length < 2000;
   } catch {
     blocked = true;
   }
@@ -137,94 +144,66 @@ export async function fromHtml(href) {
   return parseHtml(html, href);
 }
 
-export function parseHtml(html, href) {
-  const fields = {};
-  // 1) Datos estructurados (JSON-LD)
-  for (const block of matchAll(html, /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
-    let data; try { data = JSON.parse(block.trim()); } catch { continue; }
-    for (const node of flatten(data)) readJsonLd(node, fields);
-  }
-  // 2) Metadatos Open Graph
-  const meta = (prop) => {
-    const re = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']*)["']|<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${prop}["']`, "i");
-    const m = html.match(re); return m ? decode(m[1] || m[2]) : null;
-  };
-  if (!fields.title) fields.title = meta("og:title") || (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || null;
-  if (fields.title) fields.title = decode(fields.title).replace(/\s*[-|–]\s*(Zonaprop|Argenprop|RE\/MAX|Remax|Mercado Libre).*$/i, "").trim();
-  const desc = meta("og:description") || meta("description") || "";
 
-  // 3) Fotos
-  const photos = [];
-  const add = (src) => {
-    if (!src) return;
-    src = decode(src).replace(/\\u002F/g, "/").replace(/\\\//g, "/");
-    if (src.startsWith("//")) src = "https:" + src;
-    if (!/^https?:\/\//.test(src)) return;
-    if (!PHOTO_HOSTS.test(src) || /logo|icon|avatar|sprite|placeholder|banner|isotipo|marker/i.test(src)) return;
-    const key = src.replace(/\/(?:\d{2,4}x\d{2,4}|resize\/[^/]+)\//, "/").replace(/\?.*$/, "");
-    if (photos.some(p => p.key === key)) return;
-    photos.push({ key, src });
-  };
-  for (const img of [].concat(fields._images || [])) add(typeof img === "string" ? img : img?.url);
-  for (const m of matchAll(html, /<meta[^>]+property=["']og:image(?::url)?["'][^>]*content=["']([^"']+)["']/gi)) add(m);
-  for (const m of matchAll(html, /(?:https?:)?\/\/[^"'\s)<>\\]+?\.(?:jpe?g|webp)(?:\?[^"'\s)<>\\]*)?/gi)) add(m);
-  delete fields._images;
-
-  // 4) Texto plano para completar lo que falte
-  const text = [fields.title, desc, htmlToText(html)].filter(Boolean).join("\n").slice(0, 40000);
-
-  return { source: "pagina", fields: clean(fields), photos: photos.slice(0, MAX_PHOTOS).map(p => p.src), text };
-}
-
-function readJsonLd(n, f) {
-  if (!n || typeof n !== "object") return;
-  if (n.name && !f.title && /(departamento|casa|ph|ambiente|venta|alquiler|propiedad|dpto|depto)/i.test(n.name)) f.title = n.name;
-  const offer = Array.isArray(n.offers) ? n.offers[0] : n.offers;
-  if (offer && offer.price && !f.price) {
-    const cur = (offer.priceCurrency || "").toUpperCase();
-    if (cur === "USD") f.price = num(offer.price); else { f.priceOther = num(offer.price); f.currency = cur; }
-  }
-  if (n.floorSize && !f.m2) f.m2 = num(n.floorSize.value ?? n.floorSize);
-  if (n.numberOfRooms && !f.amb) f.amb = num(n.numberOfRooms);
-  if ((n.numberOfBathroomsTotal || n.numberOfFullBathrooms) && !f.banos) f.banos = num(n.numberOfBathroomsTotal || n.numberOfFullBathrooms);
-  const a = n.address;
-  if (a && typeof a === "object") {
-    if (a.streetAddress && !f.address) f.address = a.streetAddress;
-    if ((a.addressLocality || a.addressRegion) && !f.barrio) f.barrio = a.addressLocality || null;
-  }
-  if (n.telephone && !f.phone) f.phone = n.telephone;
-  if (n.image) f._images = [].concat(f._images || [], n.image);
-}
 
 /* ---------------- utilidades ---------------- */
 function json(body, status = 200, extra = {}) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", ...extra } });
 }
-function matchAll(s, re) { const out = []; let m; while ((m = re.exec(s))) out.push(m[1] ?? m[0]); return out; }
-function flatten(d) { if (Array.isArray(d)) return d.flatMap(flatten); if (d && d["@graph"]) return [d, ...flatten(d["@graph"])]; return [d]; }
-function num(v) {
-  if (v == null || v === "") return null;
-  if (typeof v === "number") return Math.round(v);
-  let t = String(v).replace(/[^\d.,]/g, "");
-  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ""));
-  const n = parseFloat(t.replace(",", ".")); return isNaN(n) ? null : Math.round(n);
+
+
+/* ---------------- RE/MAX Argentina (lectura específica) ----------------
+   - El precio aparece como "225.000 USD" (número antes de la moneda).
+   - Las características vienen como lista "etiqueta: valor" (superficie total, ambientes, baños, expensas...).
+   - Las fotos están como rutas internas "listings/<id>/<foto>.jpg" servidas desde su CDN.
+   - La página es Angular con estado del servidor embebido; si está, se usa también. */
+
+export async function fromRemax(href) {
+  const slug = (href.match(/\/listings\/([^/?#]+)/) || [])[1];
+  if (slug) {
+    const r = await fetch(`https://api-ar.redremax.com/remaxweb-ar/api/listings/findBySlug/${encodeURIComponent(slug)}`, {
+      headers: { accept: "application/json", "user-agent": UA, origin: "https://www.remax.com.ar", referer: href },
+      signal: AbortSignal.timeout(7000)
+    }).catch(() => null);
+    if (r && r.ok) {
+      const j = await r.json().catch(() => null);
+      if (j && j.data && j.data.id) return mapRemaxApi(j.data);
+    }
+  }
+  const html = await fetchHtml(href);   // plan B: la página
+  return parseRemax(html, href);
 }
-function numOrText(v) { const n = num(v); return n ?? v; }
-function clean(o) { const r = {}; for (const [k, v] of Object.entries(o)) if (v != null && v !== "" && !Number.isNaN(v)) r[k] = v; return r; }
-function decode(s) {
-  return String(s || "")
-    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&sup2;/g, "²").replace(/&deg;/g, "°")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
-    .replace(/&([a-z])(acute|tilde);/gi, (_, l, k) => (l + (k === "acute" ? "́" : "̃")).normalize("NFC"));
+
+
+
+
+/* ---------------- Argenprop (lectura específica) ----------------
+   Precio en <p class="titlebar__price">, características en lista "Etiqueta: <strong>valor</strong>",
+   dirección en .titlebar__address y .location-label, fotos en static-content/<carpeta del aviso>/.
+   La página también trae precios y fotos de avisos similares: se ignoran. */
+export async function fromArgenprop(href) {
+  const html = await fetchHtml(href);
+  const r = parseArgenprop(html, href);
+  // La página trae solo 5 fotos; la galería completa viene de /aviso/gallerypartial
+  const id = (href.match(/--(\d{5,})/) || [])[1];
+  const folder = (r.photos[0] || "").match(/static-content\/([^/]+)\//)?.[1];
+  if (id) {
+    const g = await fetch(`https://www.argenprop.com/aviso/gallerypartial?idAviso=${id}&tipo=fotos`, { headers: { "user-agent": UA, referer: href, "x-requested-with": "XMLHttpRequest" }, signal: AbortSignal.timeout(6000) }).catch(() => null);
+    if (g && g.ok) {
+      const t = await g.text();
+      const seen = new Set(), all = [];
+      for (const m of t.matchAll(/static-content\/([^/"'\s)]+)\/([0-9a-f-]{20,})(?:_[a-z_]+)?\.(jpe?g|webp|png)/gi)) {
+        if (folder && m[1] !== folder) continue;
+        if (seen.has(m[2])) continue; seen.add(m[2]);
+        all.push(`https://www.argenprop.com/static-content/${m[1]}/${m[2]}_u_large.${m[3].toLowerCase()}`);
+      }
+      if (all.length > r.photos.length) r.photos = all.slice(0, MAX_PHOTOS);
+    }
+  }
+  return r;
 }
-function htmlToText(html) {
-  return decode(
-    html
-      .replace(/<(script|style|noscript|svg|head)[\s\S]*?<\/\1>/gi, " ")
-      .replace(/<(br|\/p|\/div|\/li|\/h\d|\/tr|\/dt|\/dd)[^>]*>/gi, "\n")
-      .replace(/<[^>]+>/g, " ")
-  )
-    .split("\n").map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n");
-}
+
+
+/* ---------------- Zonaprop (lectura específica) ----------------
+   Los datos vienen en variables del script de la página: mainFeatures, pricesData, expenses,
+   address, location, postingTitle, description, pictures y whatsApp. */

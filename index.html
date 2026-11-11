@@ -49,6 +49,7 @@ h3{font-size:16px;font-weight:600}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--primary)}
 .ms{font-family:"Material Symbols Rounded";font-weight:450;font-style:normal;font-size:22px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:"liga";font-feature-settings:"liga";font-variation-settings:"FILL" 0,"opsz" 24;user-select:none;flex:none}
+.ms{width:1em;height:1em;overflow:hidden}
 .ms.fill{font-variation-settings:"FILL" 1,"opsz" 24}
 .num{font-variant-numeric:tabular-nums}
 :focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:8px}
@@ -393,6 +394,10 @@ dialog::backdrop{background:rgba(20,28,22,.42)}
 .env-card h3{font-size:16px}
 .env-card.off{opacity:.7}
 @media (max-width:840px){.sync{display:none}}
+.bm-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--ink-2)}
+.bm-steps b{color:var(--ink)}
+.bm-link{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px;border-radius:22px;background:var(--android);color:#00210F;font-weight:700;text-decoration:none;cursor:grab;box-shadow:0 2px 8px rgba(10,106,58,.25)}
+.bm-link:active{cursor:grabbing}
 .snack{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#2E322E;color:#F0F2EC;padding:14px 20px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:80;max-width:calc(100vw - 32px)}
 .snack.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -433,6 +438,7 @@ const ROLES = {
   asistente:{label:"Asistente",icon:"support_agent",desc:"Carga propiedades y arma la agenda"},
   cliente:{label:"Cliente",icon:"person",desc:"Prioriza y agenda sus visitas"}
 };
+const ROLE_INFO = Object.assign({}, ROLES, { colaborador:{label:"Broker invitado",icon:"handshake",desc:"Trabaja una operación puntual como broker"} });
 const STATUS = {
   nueva:{label:"Nueva"}, leida:{label:"Leída"}, por_visitar:{label:"Por visitar"},
   oferta:{label:"Oferta"}, negociacion:{label:"En negociación"}, reservada:{label:"Reservada"}, descartada:{label:"Descartada"}
@@ -501,7 +507,7 @@ function parseText(raw){
   const T = deacc(t);
   const out = {};
   const first = (res, src) => { for (const re of res){ const m = (src||T).match(re); if (m) return m; } return null; };
-  let m = first([/(?:USD|U\$S|US\$|u\$s|dolares)\s*([\d][\d.,]{2,})/i]);
+  let m = first([/(?:USD|U\$S|US\$|u\$s|dolares)\s*([\d][\d.,]{2,})/i, /(\d{1,3}(?:[.,]\d{3})+|\d{5,})\s*(?:USD|U\$S|US\$|dolares)/i]);
   if (m) out.price = toNumber(m[1]);
   m = first([/expensas[^\d\n]{0,25}([\d][\d.,]{2,})/i, /([\d][\d.,]{2,})\s*(?:ARS|pesos)?\s*(?:de\s*)?expensas/i]);
   if (m) out.expensas = toNumber(m[1]);
@@ -514,8 +520,9 @@ function parseText(raw){
   if (m) out.banos = +m[1];
   m = first([/(\d{1,2})[ \t]*coch/i, /cocheras?[ \t]*:?[ \t]*(\d{1,2})/i, /garages?\s*:?\s*(\d{1,2})/i]);
   if (m) out.cocheras = +m[1]; else if (/sin cochera/i.test(T)) out.cocheras = 0;
-  m = first([/numero de piso de la unidad\s*:?\s*(\d{1,2}|PB)/i, /\bpiso\s*:?\s*(\d{1,2}|PB)\b/i, /(\d{1,2})\s*(?:°|º)\s*piso/i, /\bplanta baja\b/i]);
-  if (m) out.piso = m[1] ? (m[1].toUpperCase()==="PB" ? "PB" : +m[1]) : "PB";
+  // Piso de la unidad: solo con etiqueta explícita ("Piso: 4") u ordinal ("2.º piso", "4° piso"). Evita confundir "solárium en piso 37".
+  m = first([/numero de piso de la unidad\s*:?\s*(\d{1,2}|PB)/i, /(?:^|\n)\s*piso\s*:\s*(\d{1,2}|PB)\b/im, /(\d{1,2})\s*(?:°|º|\.º|\.°)\s*piso\b/i, /(?:^|\n)\s*(planta baja)\s*$/im]);
+  if (m) out.piso = /^(pb|planta)/i.test(m[1]) ? "PB" : +m[1];
   m = first([/cantidad de pisos\s*:?\s*(\d{1,2})/i, /(\d{1,2})[ \t]*pisos\b/i, /pisos del edificio\s*:?\s*(\d{1,2})/i]);
   if (m) out.pisos = +m[1];
   m = t.match(/(?:\+?54\s*9?\s*)?\(?(?:011|11|2\d{2,3}|3\d{2,3})\)?[\s-]?(?:15[\s-]?)?\d{3,4}[\s-]?\d{4}/);
@@ -612,6 +619,9 @@ const isSuper = () => !!(S.session && S.session.super);
 const canSwitch = () => isSuper() || UI.server === false;
 const isStaff = () => role() === "broker" || role() === "asistente";
 const isBroker = () => role() === "broker";
+const isColab = () => !!(S.session && S.session.colab);
+const isOwner = () => isBroker() && !isColab();
+const roleLabel = () => isColab() && !isSuper() ? "Broker invitado" : ROLES[role()].label;
 const prop = id => op().props.find(p => p.id === id);
 const clientLabel = () => op().clients.map(c=>c.name).join(" y ") || "el cliente";
 function notices(o){ o = o||op(); o.notices = o.notices || []; return o.notices; }
@@ -657,6 +667,7 @@ function render(){
   const o = op();
   if (!o){ root.innerHTML = startHTML(); const f = root.querySelector("[autofocus]"); if (f) f.focus(); return; }
   root.innerHTML = shellHTML(o);
+  if (UI.pendingImport) setTimeout(tryImport, 0);
 }
 function shellHTML(o){
   const pendingProps = o ? o.props.filter(p=>p.approval==="pendiente").length : 0;
@@ -686,7 +697,7 @@ function shellHTML(o){
         ${UI.server===true ? `<span id="sync" class="sync" aria-live="polite">${syncLabel()}</span>` : ""}
         ${isStaff()?`<button class="icon-btn bell" data-action="notif-menu" aria-haspopup="menu" aria-label="Avisos${nUnread?": "+nUnread+" sin leer":""}"><span class="ms ${nUnread?"fill":""}">notifications</span>${nUnread?`<span class="badge-dot num">${nUnread}</span>`:""}</button>`:""}
         <button class="account" data-action="account-menu" aria-haspopup="menu">
-          <span class="who"><small>${isSuper()?"Admin · como "+ROLES[r].label:ROLES[r].label}</small><b>${esc(isSuper()?(S.session.superName||S.session.name):S.session.name)}</b></span>
+          <span class="who"><small>${isSuper()?"Admin · como "+ROLES[r].label:roleLabel()}</small><b>${esc(isSuper()?(S.session.superName||S.session.name):S.session.name)}</b></span>
           <span class="avatar av-${r} ${isSuper()?"av-super":""}">${isSuper()?'<span class="ms fill" style="font-size:18px">shield_person</span>':esc(initials(S.session.name))}</span>
         </button>
       </div>
@@ -1000,7 +1011,7 @@ function opHTML(){
   const staff = isStaff();
   return `
   <div class="page-head"><div><h1>${esc(o.name)}</h1><div class="sub">${UI.server===true && UI.env ? esc(UI.env.name)+" · " : ""}Operación creada el ${fmtDateLong(o.created)}</div></div>
-    ${staff?`<div class="actions"><button class="btn btn-outline" data-action="rename-op"><span class="ms">edit</span>Renombrar</button><button class="btn btn-filled" data-action="new-op"><span class="ms">add</span>Nueva operación</button></div>`:""}</div>
+    ${staff?`<div class="actions"><button class="btn btn-outline" data-action="rename-op"><span class="ms">edit</span>Renombrar</button>${isColab()&&!isSuper()?"":`<button class="btn btn-filled" data-action="new-op"><span class="ms">add</span>Nueva operación</button>`}</div>`:""}</div>
   <div class="op-grid">
     ${UI.server===true ? srvOpPanelsHTML(o) : staff?`<section class="panel"><h2>Link para clientes</h2><p class="hint">Compartilo con todos los compradores de esta operación. Entran con su cuenta de Google y tienen los mismos permisos.</p>
       <div class="linkbox"><code>${esc(shareLink(o))}</code><button class="btn btn-tonal btn-sm" data-action="copy-link"><span class="ms">content_copy</span>Copiar</button></div>
@@ -1011,10 +1022,12 @@ function opHTML(){
     </section>
     ${staff?`<section class="panel"><h2>Operaciones</h2><p class="hint">Cambiá de operación para ver sus propiedades y agenda.</p>
       <ul class="oplist">${S.ops.map(x=>`<li><button data-action="switch-op" data-id="${x.id}" aria-current="${x.id===o.id}"><span class="ms">folder</span><span class="t">${esc(x.name)}</span><small>${x.props.length} prop · ${x.visits.length} visitas</small></button></li>`).join("")}</ul></section>`:""}
+    ${staff?`<section class="panel"><h2>Favorito «Enviar a Visitas»</h2><p class="hint">Trae un aviso a la app desde tu navegador, aunque el portal bloquee la lectura automática. Se instala una vez en la barra de favoritos.</p><button class="btn btn-tonal" data-action="bookmarklet"><span class="ms">bookmark_add</span>Instalar el favorito</button></section>`:""}
     ${staff?`<section class="panel"><h2>Permisos por usuario</h2><p class="hint">Qué puede hacer cada rol en esta operación.</p>
       <div class="stack" style="gap:10px;font-size:14px">
         <div><b>Asistente</b><br><span style="color:var(--ink-2)">Carga propiedades desde los portales, propone visitas, sube ofertas y documentos. Ve el teléfono del anunciante.</span></div>
         <div><b>Broker</b><br><span style="color:var(--ink-2)">Todo lo del asistente, más aprobar propiedades y confirmar visitas. Solo lo aprobado lo ve el cliente.</span></div>
+        <div><b>Broker invitado</b><br><span style="color:var(--ink-2)">Otro broker que sumás a una operación puntual. La trabaja como broker (aprueba, confirma visitas, invita clientes) sin ver el resto de tu ambiente.</span></div>
         <div><b>Cliente</b><br><span style="color:var(--ink-2)">Ve lo aprobado, elige qué visitar, ordena por preferencia y agenda en Google Calendar.</span></div>
       </div></section>`:""}
     ${UI.server===true ? "" : `<section class="panel"><h2>Datos de prueba</h2><p class="hint">Esta versión guarda todo en este navegador.</p>
@@ -1029,18 +1042,75 @@ function closeDlg(){ if (dlg.open) dlg.close(); UI.confirmDelete = null; }
 dlg.addEventListener("click", e => { if (e.target === dlg) closeDlg(); });
 const head = (t) => `<div class="dlg-head"><h2>${t}</h2><button type="button" class="icon-btn" data-action="close" aria-label="Cerrar"><span class="ms">close</span></button></div>`;
 
-function propForm(p){
+/* ---------- favorito «Enviar a Visitas» ---------- */
+const BOOKMARKLET_CODE = /*BOOKMARKLET*/"(()=>{var L=/(zonapropcdn|zonaprop|argenprop|sosiva451|remax|mlstatic|cloudfront|redremax|imgix|amazonaws)/i;function v(t,s){let e={};for(let o of T(t,/<script[^>]*type=[\"']application\\/ld\\+json[\"'][^>]*>([\\s\\S]*?)<\\/script>/gi)){let p;try{p=JSON.parse(o.trim())}catch{continue}for(let g of C(p))D(g,e)}let n=o=>{let p=new RegExp(`<meta[^>]+(?:property|name)=[\"']${o}[\"'][^>]*content=[\"']([^\"']*)[\"']|<meta[^>]+content=[\"']([^\"']*)[\"'][^>]*(?:property|name)=[\"']${o}[\"']`,\"i\"),g=t.match(p);return g?_(g[1]||g[2]):null};e.title||(e.title=n(\"og:title\")||(t.match(/<title>([^<]*)<\\/title>/i)||[])[1]||null),e.title&&(e.title=_(e.title).replace(/\\s*[-|–]\\s*(Zonaprop|Argenprop|RE\\/MAX|Remax|Mercado Libre).*$/i,\"\").trim());let c=n(\"og:description\")||n(\"description\")||\"\",f=[],i=o=>{if(!o||(o=_(o).replace(/\\\\u002F/g,\"/\").replace(/\\\\\\//g,\"/\"),o.startsWith(\"//\")&&(o=\"https:\"+o),!/^https?:\\/\\//.test(o))||!L.test(o)||/logo|icon|avatar|sprite|placeholder|banner|isotipo|marker/i.test(o))return;let p=o.replace(/\\/(?:\\d{2,4}x\\d{2,4}|resize\\/[^/]+)\\//,\"/\").replace(/\\?.*$/,\"\");f.some(g=>g.key===p)||f.push({key:p,src:o})};for(let o of[].concat(e._images||[]))i(typeof o==\"string\"?o:o?.url);for(let o of T(t,/<meta[^>]+property=[\"']og:image(?::url)?[\"'][^>]*content=[\"']([^\"']+)[\"']/gi))i(o);for(let o of T(t,/(?:https?:)?\\/\\/[^\"'\\s)<>\\\\]+?\\.(?:jpe?g|webp)(?:\\?[^\"'\\s)<>\\\\]*)?/gi))i(o);delete e._images;let d=[e.title,c,M(t)].filter(Boolean).join(`\n`).slice(0,4e4);return{source:\"pagina\",fields:$(e),photos:f.slice(0,20).map(o=>o.src),text:d}}function D(t,s){if(!t||typeof t!=\"object\")return;t.name&&!s.title&&/(departamento|casa|ph|ambiente|venta|alquiler|propiedad|dpto|depto)/i.test(t.name)&&(s.title=t.name);let e=Array.isArray(t.offers)?t.offers[0]:t.offers;if(e&&e.price&&!s.price){let c=(e.priceCurrency||\"\").toUpperCase();c===\"USD\"?s.price=a(e.price):(s.priceOther=a(e.price),s.currency=c)}t.floorSize&&!s.m2&&(s.m2=a(t.floorSize.value??t.floorSize)),t.numberOfRooms&&!s.amb&&(s.amb=a(t.numberOfRooms)),(t.numberOfBathroomsTotal||t.numberOfFullBathrooms)&&!s.banos&&(s.banos=a(t.numberOfBathroomsTotal||t.numberOfFullBathrooms));let n=t.address;n&&typeof n==\"object\"&&(n.streetAddress&&!s.address&&(s.address=n.streetAddress),(n.addressLocality||n.addressRegion)&&!s.barrio&&(s.barrio=n.addressLocality||null)),t.telephone&&!s.phone&&(s.phone=t.telephone),t.image&&(s._images=[].concat(s._images||[],t.image))}function T(t,s){let e=[],n;for(;n=s.exec(t);)e.push(n[1]??n[0]);return e}function C(t){return Array.isArray(t)?t.flatMap(C):t&&t[\"@graph\"]?[t,...C(t[\"@graph\"])]:[t]}function a(t){if(t==null||t===\"\")return null;if(typeof t==\"number\")return Math.round(t);let s=String(t).replace(/[^\\d.,]/g,\"\");if(/^\\d{1,3}([.,]\\d{3})+$/.test(s))return Number(s.replace(/[.,]/g,\"\"));let e=parseFloat(s.replace(\",\",\".\"));return isNaN(e)?null:Math.round(e)}function $(t){let s={};for(let[e,n]of Object.entries(t))n!=null&&n!==\"\"&&!Number.isNaN(n)&&(s[e]=n);return s}function _(t){return String(t||\"\").replace(/&nbsp;/g,\" \").replace(/&amp;/g,\"&\").replace(/&quot;/g,'\"').replace(/&#39;|&apos;/g,\"'\").replace(/&lt;/g,\"<\").replace(/&gt;/g,\">\").replace(/&sup2;/g,\"²\").replace(/&deg;/g,\"°\").replace(/&#(\\d+);/g,(s,e)=>String.fromCharCode(+e)).replace(/&#x([0-9a-f]+);/gi,(s,e)=>String.fromCharCode(parseInt(e,16))).replace(/&([a-z])(acute|tilde);/gi,(s,e,n)=>(e+(n===\"acute\"?\"́\":\"̃\")).normalize(\"NFC\"))}function M(t){return _(t.replace(/<(script|style|noscript|svg|head)[\\s\\S]*?<\\/\\1>/gi,\" \").replace(/<(br|\\/p|\\/div|\\/li|\\/h\\d|\\/tr|\\/dt|\\/dd)[^>]*>/gi,`\n`).replace(/<[^>]+>/g,\" \")).split(`\n`).map(s=>s.replace(/\\s+/g,\" \").trim()).filter(Boolean).join(`\n`)}var R=\"https://d1acdg20u0pmxj.cloudfront.net\";function U(t){let s=t.currency&&(t.currency.value||t.currency),e=/USD/i.test(String(s||\"\")),n=String(t.description||\"\"),c=n.match(/(\\d{1,2})\\s*(?:°|º|\\.º|\\.°|er\\.?|do\\.?|to\\.?|vo\\.?|no\\.?)\\s*piso\\b/i),f=(t.associate&&t.associate.phones||[]).find(p=>p&&p.value)||null,i=t.geo&&(t.geo.neighborhood||t.geo.label),d=$({title:t.title,price:e&&t.priceExposure!==!1?a(t.price):null,priceOther:e?null:a(t.price),currency:s||null,expensas:a(t.expensesPrice)||null,m2:a(t.dimensionTotalBuilt)||a(t.dimensionCovered)||a(t.dimensionLand)||null,amb:a(t.totalRooms)||(a(t.bedrooms)!=null?a(t.bedrooms)+1:null),banos:a(t.bathrooms),cocheras:a(t.parkingSpaces),pisos:a(t.floors)||null,piso:c?a(c[1]):/planta baja/i.test(n)?\"PB\":null,address:t.displayAddress||null,barrio:i?F(String(i).split(\",\")[0]):null,phone:f?f.value.replace(/[()]/g,\" \").replace(/\\s+/g,\" \").trim():null}),o=(t.photos||[]).filter(p=>p&&!p.is360).sort((p,g)=>(p.position||0)-(g.position||0)).map(p=>String(p.value||p.rawValue+\".jpg\").replace(/^listings\\/([^/]+)\\/([^/]+)$/,`${R}/listings/$1/1080xAUTO/$2`)).filter(p=>/^https:/.test(p)).slice(0,20);return{source:\"api_remax\",fields:d,photos:o,text:[t.title,n].filter(Boolean).join(`\n`)}}var F=t=>t.replace(/\\b\\p{L}/gu,s=>s.toUpperCase());function z(t,s){let e=v(t,s),n=k(t),c=M(n),f=c.replace(/ /g,\" \"),i={},d=r=>a(r),o=r=>{let x=f.match(r);return x?x[1]:null},p=f.replace(/expensas[^\\n]*/gi,\"\"),g=p.match(/(\\d{1,3}(?:[.,]\\d{3})+|\\d{4,})\\s*(USD|U\\$S|US\\$)(?![a-z])/i)||p.match(/(USD|U\\$S|US\\$)\\s*(\\d{1,3}(?:[.,]\\d{3})+|\\d{4,})/i)||p.match(/(\\d{1,3}(?:[.,]\\d{3})+|\\d{4,})\\s*(ARS|\\$)(?![a-z])/i);if(g){let[r,x]=/\\d/.test(g[1])?[g[1],g[2]]:[g[2],g[1]];/USD|U\\$S|US\\$/i.test(x)?i.price=d(r):(i.priceOther=d(r),i.currency=\"ARS\")}if(i.expensas=d(o(/expensas\\s*:?\\s*\\$?\\s*(\\d[\\d.,]*)/i)),i.m2=d(o(/superficie total\\s*:?\\s*(\\d[\\d.,]*)\\s*m/i))??d(o(/(\\d[\\d.,]*)\\s*m²\\s*totales/i))??d(o(/superficie cubierta\\s*:?\\s*(\\d[\\d.,]*)\\s*m/i)),i.amb=d(o(/\\bambientes\\s*:\\s*(\\d{1,2})/i))??d(o(/(\\d{1,2})\\s*ambientes/i)),i.amb==null){let r=d(o(/dormitorios\\s*:?\\s*(\\d{1,2})/i));r!=null&&(i.amb=r+1)}i.banos=d(o(/\\bbaños\\s*:?\\s*(\\d{1,2})/i))??d(o(/(\\d{1,2})\\s*baños?/i)),i.cocheras=d(o(/\\b(?:cocheras?|estacionamientos?|garages?)\\s*:?\\s*(\\d{1,2})/i)),i.pisos=d(o(/pisos de la propiedad\\s*:?\\s*(\\d{1,3})/i))??d(o(/cantidad de pisos\\s*:?\\s*(\\d{1,3})/i));let h=o(/(\\d{1,2})\\s*(?:°|º|\\.º|\\.°|er\\.?|do\\.?|to\\.?|vo\\.?|no\\.?)\\s*piso\\b/i)||(/planta baja/i.test(f)?\"PB\":null);h!=null&&(i.piso=h===\"PB\"?\"PB\":d(h));let m=(((n.match(/<meta[^>]+name=[\"']keywords[\"'][^>]*content=[\"']([^\"']+)[\"']/i)||[])[1]||\"\")+`\n`+f).split(/\\n|,(?=\\s*[A-ZÁÉÍÓÚ])/).map(r=>r.trim()).find(r=>/^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ.'\\s]{2,40}\\s\\d{2,5}$/.test(r));m&&(i.address=m);let O=f.match(/\\n([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ.\\s]{2,30}),\\s*(Capital Federal|CABA|Buenos Aires|G\\.B\\.A\\.[^\\n]*|Córdoba|Rosario|Santa Fe|Mendoza)/);O&&(i.barrio=O[1].trim());let y=X(n,s);for(let[r,x]of Object.entries(y.fields))i[r]==null&&x!=null&&(i[r]=x);let l=[],A=new Set,u=r=>{let x=String(r).match(/listings\\/([0-9a-f-]{36})\\/(?:[0-9A-Za-z]+x[0-9A-Za-z]+\\/)?([0-9a-f-]{36}\\.(?:jpe?g|png|webp))/i);if(!x)return;let w=x[1]+\"/\"+x[2];A.has(w)||(A.add(w),l.push(`${R}/listings/${x[1]}/1080xAUTO/${x[2]}`))};for(let r of y.photos)u(r);for(let r of n.matchAll(/listings\\/[0-9a-f-]{36}\\/(?:[0-9A-Za-z]+x[0-9A-Za-z]+\\/)?[0-9a-f-]{36}\\.(?:jpe?g|png|webp)/gi))u(r[0]);for(let r of e.photos){let x=l.length;u(r),l.length===x&&!/cloudfront/i.test(r)&&!l.includes(r)&&l.push(r)}let b=$({...e.fields,...$(i)});return b.title&&(b.title=b.title.replace(/\\s+/g,\" \").trim()),{source:\"pagina_remax\",fields:b,photos:l.slice(0,20),text:[b.title,c].filter(Boolean).join(`\n`).slice(0,4e4)}}function k(t){return t.replace(/&q;/g,'\"').replace(/&s;/g,\"'\").replace(/&l;/g,\"<\").replace(/&g;/g,\">\").replace(/&a;/g,\"&\")}function X(t,s){let e={fields:{},photos:[]},n=t.match(/<script[^>]+id=[\"'](?:ng-state|serverApp-state|[\\w-]*-state)[\"'][^>]*>([\\s\\S]*?)<\\/script>/i);if(!n)return e;let c;try{c=JSON.parse(k(n[1]))}catch{return e}let f=(s.match(/\\/listings\\/([^/?#]+)/)||[])[1]||\"\",i=null,d=(h,S)=>{if(!(!h||typeof h!=\"object\"||S>12)){if(!Array.isArray(h)){let m=Object.keys(h),O=m.some(l=>/^price$/i.test(l)),y=m.some(l=>/photo|image|picture/i.test(l));(f&&h.slug===f||O&&y&&!i)&&(i=h)}for(let m of Object.values(h))d(m,S+1)}};if(d(c,0),!i)return e;let o=h=>{for(let[S,m]of Object.entries(i))if(h.test(S)&&m!=null&&typeof m!=\"object\")return m;return null},p=i.currency&&typeof i.currency==\"object\"?i.currency.value||i.currency.name:i.currency,g=a(o(/^price$/i));g!=null&&(!p||/USD|U\\$S/i.test(p)?e.fields.price=g:(e.fields.priceOther=g,e.fields.currency=String(p))),e.fields.expensas=a(o(/^expenses?$/i)),e.fields.m2=a(o(/total.*(surface|built|dimension)|dimension.*total/i))??a(o(/covered|cubiert/i)),e.fields.amb=a(o(/^total ?rooms$|^rooms$|ambientes/i)),e.fields.banos=a(o(/^bathrooms$|baños/i)),e.fields.cocheras=a(o(/parking|garage|cochera/i)),e.fields.pisos=a(o(/^floors$|floorsCount/i)),e.fields.address=o(/displayAddress|^address$/i),e.fields.title=o(/^title$/i);for(let[h,S]of Object.entries(i))if(/photo|image|picture/i.test(h)&&Array.isArray(S))for(let m of S)e.photos.push(typeof m==\"string\"?m:m&&(m.value||m.url||m.path||m.key||m.rawValue)||\"\");return e.fields=$(e.fields),e}function B(t,s){let e={},n=u=>_(String(u||\"\").replace(/<[^>]+>/g,\" \")).replace(/\\s+/g,\" \").trim(),c=u=>{let b=t.match(u);return b?n(b[1]):null},f=c(/<p[^>]*class=\"titlebar__price\"[^>]*>([\\s\\S]*?)<\\/p>/i),i={};for(let u of t.matchAll(/<li[^>]*>\\s*<h3>\\s*([^<:]+?)\\s*:\\s*<strong>\\s*([\\s\\S]*?)\\s*<\\/strong>/gi))i[n(u[1]).toLowerCase()]=n(u[2]);let d=u=>{for(let[b,r]of Object.entries(i))if(u.test(b))return r;return null};if((u=>{if(!u)return;let b=a((u.match(/[\\d.,]{3,}/)||[])[0]);/USD|U\\$S|US\\$/i.test(u)?e.price=b:b&&(e.priceOther=b,e.currency=\"ARS\")})(f&&/\\d/.test(f)?f:d(/^precio$/)),e.expensas=a((d(/^expensas$/)||c(/titlebar__price-mobile[\\s\\S]*?<span>([^<]*expensas[^<]*)<\\/span>/i)||\"\").match(/[\\d.,]{3,}/)?.[0]),e.amb=a(d(/ambientes/)),e.amb==null){let u=a(d(/dormitorios/));u!=null&&(e.amb=u+1)}e.banos=a(d(/baños|banos/)),e.cocheras=a(d(/cochera/)),e.m2=a((d(/sup\\.? total|superficie total/)||\"\").match(/[\\d.,]+/)?.[0])??a((d(/sup\\.? cubierta/)||\"\").match(/[\\d.,]+/)?.[0]);let p=d(/^piso|ubicaci[oó]n.*piso|n[uú]mero de piso/);p&&(e.piso=/pb|planta baja/i.test(p)?\"PB\":a(p)),e.pisos=a(d(/cant\\.? pisos|pisos del edificio|cantidad de pisos/)),e.address=c(/<h2[^>]*class=\"titlebar__address\"[^>]*>([\\s\\S]*?)<\\/h2>/i);let g=c(/<p[^>]*class=\"location-label\"[^>]*>[\\s\\S]*?<span>([\\s\\S]*?)<\\/span>/i);if(g){let u=g.split(\",\").map(b=>b.trim());e.address||(e.address=u[0]),u[1]&&(e.barrio=u[1])}let h=v(t,s),S=u=>{let b=t.match(new RegExp(`<meta[^>]+content=\"([^\"]*)\"[^>]*property=\"${u}\"|<meta[^>]+property=\"${u}\"[^>]*content=\"([^\"]*)\"`,\"i\"));return b?_(b[1]||b[2]):null},m=S(\"og:description\");e.title=m&&m.length<140?m:h.fields.title||S(\"og:title\");let y=((S(\"og:image\")||\"\").match(/static-content\\/([^/]+)\\//)||[])[1],l=[];if(y){let u=new RegExp(`https?:\\\\/\\\\/[^\"'\\\\s]*static-content\\\\/${y.replace(/[.*+?^${}()|[\\]\\\\]/g,\"\\\\$&\")}\\\\/([0-9a-f-]{20,})(?:_[a-z_]+)?\\\\.(jpe?g|webp|png)`,\"gi\"),b=new Set;for(let r of t.matchAll(u))b.has(r[1])||(b.add(r[1]),l.push(`https://www.argenprop.com/static-content/${y}/${r[1]}.${r[2].toLowerCase()}`))}let A=c(/<div[^>]*class=\"[^\"]*section-description[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/i)||\"\";return{source:\"pagina_argenprop\",fields:$({...$(h.fields),...$(e),title:e.title||h.fields.title}),photos:l.length?l.slice(0,20):h.photos,text:[e.title,A,Object.entries(i).map(([u,b])=>u+\": \"+b).join(`\n`)].filter(Boolean).join(`\n`)}}function N(t,s){let e={},n=r=>{let x=t.match(r);if(!x)return null;try{return JSON.parse(x[1])}catch{return null}},c=r=>{let x=t.match(r);if(!x)return null;try{return JSON.parse('\"'+x[1]+'\"')}catch{return x[1]}},f=n(/mainFeatures\\s*=\\s*(\\{[^\\n]*\\})\\s*\\n/)||n(/'mainFeatures'\\s*:\\s*(\\{[^\\n]*\\})\\s*,\\s*\\n/)||{},i=r=>f[r]&&f[r].value!=null?f[r].value:null;e.m2=a(i(\"CFT100\"))??a(i(\"CFT101\")),e.amb=a(i(\"CFT1\")),e.amb==null&&a(i(\"CFT2\"))!=null&&(e.amb=a(i(\"CFT2\"))+1),e.banos=a(i(\"CFT3\")),e.cocheras=a(i(\"CFT7\"));let o=(n(/'pricesData'\\s*:\\s*(\\[[^\\n]*\\])\\s*,\\s*\\n/)||[]).flatMap(r=>r.prices||[]),p=o.find(r=>/USD/i.test(r.isoCode||r.currency));if(p)e.price=a(p.amount);else if(o[0])e.priceOther=a(o[0].amount),e.currency=o[0].isoCode||\"ARS\";else{let r=c(/'price'\\s*:\\s*'([^']*)'/);r&&/USD/.test(r)&&(e.price=a(r.match(/[\\d.,]+/)?.[0]))}let g=a(c(/'expenses'\\s*:\\s*'([^']*)'/));g&&(e.expensas=g);let h=n(/'address'\\s*:\\s*(\\{[^\\n}]*\\})/);h&&h.name&&(e.address=h.name.replace(/\\s+/g,\" \").trim());let S=n(/'location'\\s*:\\s*(\\{[^\\n]*\\})\\s*,\\s*\\n/);if(S){let r=S,x=null,w=null;for(;r;)r.label===\"ZONA\"&&(x=r.name),r.label===\"BARRIO\"&&(w=r.name),r=r.parent;e.barrio=x||w||S.name}e.title=c(/'postingTitle'\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"/)||c(/'generatedTitle'\\s*:\\s*'([^']*)'/);let m=c(/'whatsApp'\\s*:\\s*'([^']*)'/);m&&/\\d{8,}/.test(m.replace(/\\D/g,\"\"))&&(e.phone=\"+\"+m.replace(/^\\+/,\"\").trim());let O=(c(/'description'\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"/)||\"\").replace(/<br\\s*\\/?>/gi,`\n`).replace(/<[^>]+>/g,\" \"),y=O.match(/(\\d{1,2})\\s*(?:°|º|\\.º|\\.°|er\\.?|do\\.?|to\\.?|vo\\.?|no\\.?)\\s*piso\\b/i);y&&(e.piso=a(y[1]));let l=O.match(/(\\d{1,2})\\s*pisos\\b/i);l&&(e.pisos=a(l[1]));let u=(n(/'pictures'\\s*:\\s*(\\[[^\\n]*\\])\\s*,\\s*\\n/)||[]).sort((r,x)=>(r.order||0)-(x.order||0)).map(r=>String(r.url1200x1200||r.resizeUrl1200x1200||r.url730x532||\"\").replace(/\\?.*$/,\"\")).filter(Boolean),b=v(t,s);return u.length||(u=b.photos),{source:\"pagina_zonaprop\",fields:$({...$(b.fields),...$(e)}),photos:[...new Set(u)].slice(0,20),text:[e.title,O].filter(Boolean).join(`\n`)}}function P(t,s){let e={},n={};for(let l of t.matchAll(/\\{\"id\":\"([^\"]{2,60})\",\"text\":\"([^\"]{0,80})\"\\}/g)){let A=l[1].toLowerCase();A in n||/^\\d{6,}$/.test(l[2])||(n[A]=l[2])}let c=l=>{for(let[A,u]of Object.entries(n))if(l.test(A))return u;return null},f=l=>a(String(l||\"\").split(/\\s+a\\s+/)[0].match(/[\\d.,]+/)?.[0]);e.m2=f(c(/^superficie total$/))??f(c(/^superficie cubierta$/)),e.amb=f(c(/^ambientes$/)),e.amb==null&&f(c(/^dormitorios$/))!=null&&(e.amb=f(c(/^dormitorios$/))+1),e.banos=f(c(/^baños$/)),e.cocheras=f(c(/^cocheras$/));let i=c(/número de piso de la unidad|^piso$/);i!=null&&(e.piso=/pb|planta baja/i.test(i)?\"PB\":f(i)),e.pisos=f(c(/^cantidad de pisos$/));let d=c(/^expensas$/);d&&(e.expensas=f(d));let o=t.match(/\"offers\":\\{\"price\":([\\d.]+)[^}]*\"priceCurrency\":\"(\\w+)\"/);o&&(/USD/i.test(o[2])?e.price=a(o[1]):(e.priceOther=a(o[1]),e.currency=o[2]));let p=t.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i);p&&(e.title=_(p[1].replace(/<[^>]+>/g,\"\")).replace(/\\s+/g,\" \").trim());let g=[...[...t.matchAll(/\"id\":\"LOCATION_RE\"[^}]*\\},\"title\":\\{\"text\":\"([^\"]{6,160})\"/g)].map(l=>l[1]),...[...t.matchAll(/class=\"[^\"]*ui-pdp-media__title[^\"]*\"[^>]*>([^<]{6,160})<\/g)].map(l=>_(l[1]).trim())].filter(l=>/\\d/.test(l)&&l.includes(\",\"));if(g[0]){let l=g[0].split(\",\").map(A=>A.trim());e.address=l[0],l[1]&&(e.barrio=l[1])}let h=[];for(let l of t.matchAll(/https:\\/\\/http2\\.mlstatic\\.com\\/D_NQ_NP_(?:2X_)?(\\d+-MLA\\d+_\\d+)-[A-Z]\\.(?:webp|jpg)/g))h.includes(l[1])||h.push(l[1]);let S=h.map(l=>`https://http2.mlstatic.com/D_NQ_NP_2X_${l}-F.webp`).slice(0,20),m=v(t,s),O=(t.match(/\"description\":\\{[^}]*?\"content\":\"((?:[^\"\\\\]|\\\\.)*)\"/)||[])[1]||\"\",y=\"\";try{y=JSON.parse('\"'+O+'\"')}catch{}return{source:\"pagina_mercadolibre\",fields:$({...$(m.fields),...$(e)}),photos:S.length?S:m.photos,text:[e.title,y,Object.entries(n).map(([l,A])=>l+\": \"+A).join(`\n`)].filter(Boolean).join(`\n`).slice(0,2e4)}}var E=\"__APP__\";function j(t){let s=document.createElement(\"div\");s.textContent=t,s.style.cssText=\"position:fixed;z-index:2147483647;left:50%;top:24px;transform:translateX(-50%);max-width:min(560px,90vw);background:#191C19;color:#fff;font:600 15px/1.4 system-ui,sans-serif;padding:14px 20px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.3)\",document.body.appendChild(s),setTimeout(()=>s.remove(),5e3)}async function H(){let t=location.hostname,s=location.href.split(\"#\")[0],e=document.documentElement.outerHTML;if(/(^|\\.)zonaprop\\.com\\.ar$/.test(t))return{portal:\"Zonaprop\",r:N(e,s)};if(/(^|\\.)argenprop\\.com$/.test(t)){let n=B(e,s),c=(s.match(/--(\\d{5,})/)||[])[1],f=(n.photos[0]||\"\").match(/static-content\\/([^/]+)\\//)?.[1];if(c)try{let i=await(await fetch(`/aviso/gallerypartial?idAviso=${c}&tipo=fotos`)).text(),d=new Set,o=[];for(let p of i.matchAll(/static-content\\/([^/\"'\\s)]+)\\/([0-9a-f-]{20,})(?:_[a-z_]+)?\\.(jpe?g|webp|png)/gi))f&&p[1]!==f||d.has(p[2])||(d.add(p[2]),o.push(`https://www.argenprop.com/static-content/${p[1]}/${p[2]}_u_large.${p[3].toLowerCase()}`));o.length>n.photos.length&&(n.photos=o)}catch{}return{portal:\"Argenprop\",r:n}}if(/(^|\\.)remax\\.com\\.ar$/.test(t)){let n=(s.match(/\\/listings\\/([^/?#]+)/)||[])[1];if(n)try{let c=await(await fetch(`https://api-ar.redremax.com/remaxweb-ar/api/listings/findBySlug/${encodeURIComponent(n)}`)).json();if(c&&c.data&&c.data.id)return{portal:\"RE/MAX\",r:U(c.data)}}catch{}return{portal:\"RE/MAX\",r:z(e,s)}}return/(^|\\.)mercadolibre\\.com\\.ar$/.test(t)?{portal:\"Mercado Libre\",r:P(e,s)}:null}(async()=>{let t;try{t=await H()}catch(i){j(\"No se pudo leer este aviso (\"+i.message+\").\");return}if(!t){j(\"Abrí un aviso de Zonaprop, Argenprop, RE/MAX o Mercado Libre y tocá el favorito de nuevo.\");return}let s=t.r.fields||{};if(!s.price&&!s.m2&&!s.amb){j(\"No encontramos los datos de una propiedad. Abrí la página del aviso (no el listado de resultados) y probá de nuevo.\");return}s.phone&&String(s.phone).replace(/\\D/g,\"\").length<8&&delete s.phone;let e={v:1,url:location.href.split(\"#\")[0],portal:t.portal,source:\"favorito\",fields:s,photos:(t.r.photos||[]).slice(0,20),text:String(t.r.text||\"\").slice(0,3e3)},n=btoa(unescape(encodeURIComponent(JSON.stringify(e)))).replace(/\\+/g,\"-\").replace(/\\//g,\"_\").replace(/=+$/,\"\"),c=E+\"/#importar=\"+n;window.open(c,\"_blank\")?j(\"Listo: se abrió Visitas con los datos de este aviso.\"):location.href=c})();})();"/*FIN_BOOKMARKLET*/;
+function bookmarkletHref(){ return "javascript:" + encodeURIComponent(BOOKMARKLET_CODE.split("__APP__").join(location.origin)); }
+function bookmarkletDlg(){
+  const live = UI.server === true;
+  openDlg(`<div class="dlg">${head("Favorito «Enviar a Visitas»")}<div class="dlg-body">
+    <p style="margin:0 0 12px;color:var(--ink-2)">Trae un aviso a la app desde tu propio navegador, aunque el portal bloquee la lectura automática. Funciona con <b>Zonaprop, Argenprop, RE/MAX y Mercado Libre</b>, en computadora (Chrome, Edge, Firefox o Safari).</p>
+    ${live ? "" : `<div class="note" style="background:var(--amber-soft);margin-bottom:12px"><span class="ms" style="color:var(--amber)">info</span>Instalalo desde la versión publicada en Netlify: el favorito envía los avisos a la dirección desde donde lo instalás.</div>`}
+    <ol class="bm-steps">
+      <li><b>Mostrá la barra de favoritos.</b> Ctrl + Shift + B en Windows, Cmd + Shift + B en Mac.</li>
+      <li><b>Arrastrá este botón hasta la barra:</b><div style="margin:10px 0 4px"><a class="bm-link" href="${esc(bookmarkletHref())}" draggable="true" title="Arrastrame a la barra de favoritos"><span class="ms fill">holiday_village</span>Enviar a Visitas</a></div><small>No lo toques acá: arrastralo.</small></li>
+      <li><b>Abrí un aviso</b> en el portal (la página de la propiedad, no el listado) y tocá el favorito. Se abre Visitas con la propiedad cargada: revisá y guardá.</li>
+    </ol>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">¿No podés arrastrarlo?</summary>
+      <ol class="bm-steps" style="margin-top:8px"><li>Tocá <b>Copiar código</b>.</li><li>Click derecho en la barra de favoritos → <b>Agregar página</b> (o “Agregar favorito”).</li><li>Nombre: <b>Enviar a Visitas</b>. En URL pegá el código copiado y guardá.</li></ol>
+      <button class="btn btn-outline btn-sm" data-action="bm-copy" style="margin-top:6px"><span class="ms">content_copy</span>Copiar código</button>
+    </details>
+  </div><div class="dlg-foot"><button class="btn btn-filled" data-action="close">Listo</button></div></div>`);
+  const a = dlg.querySelector(".bm-link");
+  if (a) a.addEventListener("click", ev => { ev.preventDefault(); snack("Arrastrá el botón hasta la barra de favoritos"); });
+}
+function captureImport(){
+  const m = (location.hash||"").match(/^#importar=([A-Za-z0-9_-]+)/);
+  if (!m){ try { const s = sessionStorage.getItem("visitas-import"); if (s) UI.pendingImport = JSON.parse(s); } catch(e){} return; }
+  try {
+    const b = m[1].replace(/-/g,"+").replace(/_/g,"/");
+    const json = decodeURIComponent(escape(atob(b + "=".repeat((4 - b.length % 4) % 4))));
+    const p = JSON.parse(json);
+    if (p && p.fields){ UI.pendingImport = p; try { sessionStorage.setItem("visitas-import", json); } catch(e){} }
+  } catch(e){ setTimeout(()=>snack("No se pudieron leer los datos que envió el favorito."), 300); }
+  try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+}
+function clearImport(){ UI.pendingImport = null; try { sessionStorage.removeItem("visitas-import"); } catch(e){} }
+function tryImport(){
+  const p = UI.pendingImport;
+  if (!p || !S.session || S.session.noAccess || dlg.open) return;
+  if (!isStaff()){ clearImport(); snack("Para agregar propiedades tenés que ingresar como broker o asistente."); return; }
+  if (!op()) return; // espera a que exista una operación
+  clearImport();
+  propForm(null, p);
+}
+function applyImport(p){
+  if (p.url) $("#f-url").value = p.url;
+  const merged = Object.assign(parseText(p.text || ""), p.fields || {});
+  fillProp(merged, true);
+  UI.tmpPhotos = (p.photos || []).filter(u => /^https:\/\//.test(u));
+  $("#thumbs").innerHTML = thumbsHTML();
+  const labels = {price:"precio",expensas:"expensas",m2:"m²",amb:"ambientes",banos:"baños",cocheras:"cocheras",piso:"piso",pisos:"pisos",address:"dirección",barrio:"barrio",phone:"teléfono",title:"título"};
+  const got = Object.keys(labels).filter(k=>merged[k]!=null && merged[k]!=="").map(k=>labels[k]);
+  if (UI.tmpPhotos.length) got.push(UI.tmpPhotos.length + (UI.tmpPhotos.length===1?" foto":" fotos"));
+  $("#found").innerHTML = `<span class="ms" style="font-size:18px">bookmark_added</span>Traído de ${esc(p.portal||"el portal")} con el favorito: ${got.join(", ")}. Revisá los campos en verde y guardá.`;
+  UI.lastRead = { url:p.url, portal:p.portal, source:"favorito", fields:p.fields, photos:p.photos, text:p.text };
+}
+
+function propForm(p, imported){
   const e = p || {};
   UI.tmpPhotos = [...(e.photos||[])];
+  const opPick = imported && S.ops.length > 1 ? `<div class="field"><label for="f-op">Agregar en la operación</label><select id="f-op">${S.ops.map(x=>`<option value="${x.id}" ${x.id===S.currentOp?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>` : "";
   const portals = [["Zonaprop","https://www.zonaprop.com.ar/"],["RE/MAX","https://www.remax.com.ar/"],["Argenprop","https://www.argenprop.com/"],["Mercado Libre","https://inmuebles.mercadolibre.com.ar/"]];
   openDlg(`<form class="dlg" data-form="prop" data-id="${e.id||""}">
     ${head(p?"Editar propiedad":"Agregar propiedad")}
     <div class="dlg-body"><div class="form">
+      ${opPick}
       <div class="field"><label for="f-url">Link de la publicación</label>
         <div class="urlrow"><input id="f-url" type="text" inputmode="url" placeholder="https://www.zonaprop.com.ar/propiedades/..." value="${esc(e.url||"")}" ${p?"":"autofocus"}><button type="button" class="btn btn-tonal" data-action="parse-url"><span class="ms">auto_awesome</span>Completar</button></div>
         <div id="found" class="found"></div>
         <div class="portals">${portals.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener"><span class="ms">open_in_new</span>${n}</a>`).join("")}</div>
         <span class="help">Pegá el link del aviso y tocá Completar. Se cargan los datos y las fotos de la publicación.</span>
+        <button type="button" class="btn btn-text btn-sm" data-action="bookmarklet" style="align-self:flex-start;padding:0 6px"><span class="ms" style="font-size:18px">bookmark_add</span>¿El portal bloquea la lectura? Usá el favorito «Enviar a Visitas»</button>
       </div>
       <div class="field paste-box"><label for="f-text"><span class="ms" style="font-size:16px;vertical-align:-3px">content_paste</span> Si el portal no deja leer el aviso: pegá su texto</label>
         <textarea id="f-text" placeholder="En el aviso: Ctrl + A para seleccionar todo, Ctrl + C para copiar, y pegalo acá con Ctrl + V."></textarea>
@@ -1063,6 +1133,7 @@ function propForm(p){
     </div></div>
     <div class="dlg-foot">${p && isStaff()?`<button type="button" class="btn ${UI.confirmDelete===p.id?"btn-danger":"btn-text"}" data-action="del-prop" data-id="${p.id}" style="margin-right:auto">${UI.confirmDelete===p.id?"Confirmar eliminación":"Eliminar"}</button>`:""}<button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">${p?"Guardar cambios":isBroker()?"Agregar y aprobar":"Agregar para aprobación"}</button></div>
   </form>`);
+  if (imported) applyImport(imported);
 }
 function thumbsHTML(){
   return UI.tmpPhotos.map((src,i)=>`<div class="thumb"><img src="${src}" alt="Foto ${i+1}"><button type="button" data-action="rm-photo" data-i="${i}" aria-label="Quitar foto"><span class="ms">close</span></button></div>`).join("") +
@@ -1339,6 +1410,7 @@ document.addEventListener("click", async e => {
       t.disabled = false; t.innerHTML = label;
       if (!document.body.contains(f)) break;
       if (res.ok){
+        UI.lastRead = res.data;
         const merged = Object.assign(parseText(res.data.text||""), res.data.fields||{});
         if (!merged.barrio && info.barrio) merged.barrio = info.barrio;
         fillProp(merged, true);
@@ -1351,17 +1423,25 @@ document.addEventListener("click", async e => {
         if (nPh) got.push(nPh + (nPh===1?" foto":" fotos"));
         const cur = res.data.fields && res.data.fields.currency && res.data.fields.currency!=="USD" ? ` El precio está en ${esc(res.data.fields.currency)} (${fmtNum(res.data.fields.priceOther)}): cargalo en dólares.` : "";
         const miss = ["price","expensas","phone"].filter(k=>merged[k]==null||merged[k]==="").map(k=>labels[k]);
-        f.innerHTML = `<span class="ms" style="font-size:18px">check_circle</span>Leído de ${esc(res.data.portal||info.portal)}: ${got.join(", ")}.${cur}${miss.length?` Falta: ${miss.join(", ")}.`:""} Revisá los campos en verde.`;
+        f.innerHTML = `<span class="ms" style="font-size:18px">check_circle</span>Leído de ${esc(res.data.portal||info.portal)}: ${got.join(", ")}.${cur}${miss.length?` Falta: ${miss.join(", ")}.`:""} Revisá los campos en verde. <button type="button" class="btn btn-text btn-sm" data-action="copy-diag" style="height:26px;padding:0 8px">¿Faltan datos? Copiar diagnóstico</button>`;
       } else if (res.reason === "no_server"){
         const got = [info.portal, info.amb && info.amb+" ambientes", info.barrio, info.m2 && info.m2+" m²"].filter(Boolean);
         f.innerHTML = `<span style="color:var(--amber)">${got.length?"Del link: "+got.map(esc).join(" · ")+". ":""}La lectura completa del aviso funciona en la versión publicada en Netlify. Acá pegá el texto del aviso abajo.</span>`;
         $("#f-text").focus();
       } else {
-        f.innerHTML = `<span style="color:var(--amber)">${esc(res.message||"No se pudo leer el aviso.")} ${res.reason==="bloqueado"?"":"Podés pegar el texto del aviso abajo."}</span>`;
+        f.innerHTML = `<span style="color:var(--amber)">${esc(res.message||"No se pudo leer el aviso.")} ${res.reason==="bloqueado"?"Abrí el aviso en tu navegador y usá el favorito «Enviar a Visitas», o pegá el texto abajo.":"Podés pegar el texto del aviso abajo."}</span>`;
         $("#f-text").focus();
       }
       break;
     }
+    case "copy-diag": {
+      const d = UI.lastRead || {};
+      const diag = JSON.stringify({ url: d.url, portal: d.portal, source: d.source, fields: d.fields, photos: (d.photos||[]).slice(0,5), nPhotos: (d.photos||[]).length, text: String(d.text||"").slice(0, 3000) }, null, 1);
+      try { await navigator.clipboard.writeText(diag); snack("Diagnóstico copiado. Pegalo en el chat con Claude."); } catch(err){ snack("No se pudo copiar el diagnóstico."); }
+      break;
+    }
+    case "bookmarklet": bookmarkletDlg(); break;
+    case "bm-copy": try { await navigator.clipboard.writeText(bookmarkletHref()); snack("Código del favorito copiado"); } catch(err){ snack("No se pudo copiar. Usá la opción de arrastrar."); } break;
     case "parse-text": {
       const txt = $("#f-text").value;
       const f = $("#found-text");
@@ -1472,14 +1552,14 @@ document.addEventListener("click", async e => {
     case "load-demo-ok": { closeDlg(); const sess = S.session; S = seed(); if (sess) S.session = sess; UI.view = "propiedades"; UI.weekStart = null; commit("Datos de ejemplo cargados"); break; }
     case "op-menu": {
       if (menuEl){ closeMenu(); break; }
-      openMenu(t, `<div class="lbl">Operaciones</div>${S.ops.map(x=>`<button data-action="switch-op" data-id="${x.id}"><span class="ms">${x.id===o.id?"check":"folder"}</span>${esc(x.name)}</button>`).join("")}${isStaff()?`<hr><button data-action="new-op"><span class="ms">add</span>Nueva operación</button>`:""}`);
+      openMenu(t, `<div class="lbl">Operaciones</div>${S.ops.map(x=>`<button data-action="switch-op" data-id="${x.id}"><span class="ms">${x.id===o.id?"check":"folder"}</span>${esc(x.name)}</button>`).join("")}${isStaff() && !(isColab()&&!isSuper())?`<hr><button data-action="new-op"><span class="ms">add</span>Nueva operación</button>`:""}`);
       break;
     }
     case "account-menu": {
       if (menuEl){ closeMenu(); break; }
       const head = isSuper() ? `<div class="lbl">Superusuario · ${esc(S.session.superName)}</div><div class="lbl" style="padding-top:0;text-transform:none;letter-spacing:0;font-weight:500">Cambiá de rol para ver la app como cada usuario</div>`
         : canSwitch() ? `<div class="lbl">Modo de prueba · probar como</div>`
-        : `<div class="lbl">${esc(S.session.name)} · ${ROLES[role()].label}</div>`;
+        : `<div class="lbl">${esc(S.session.name)} · ${roleLabel()}</div>`;
       const roles = canSwitch() ? Object.entries(ROLES).map(([k,r])=>`<button data-action="as-role" data-role="${k}"><span class="ms">${role()===k?"check":r.icon}</span><span>${r.label}<br><small style="color:var(--ink-3)">${r.desc}</small></span></button>`).join("") + "<hr>" : "";
       const extra = UI.server === true ? `<div class="lbl" style="padding-top:0;text-transform:none;letter-spacing:0;font-weight:500">${esc(S.session.email||"")}${UI.env?" · "+esc(UI.env.name):""}</div>` : "";
       openMenu(t, `${head}${extra}${roles}<button data-action="logout"><span class="ms">logout</span>Cerrar sesión</button>`);
@@ -1500,7 +1580,7 @@ document.addEventListener("click", async e => {
     case "admin-open": UI.adminLogin = true; render(); break;
     case "env-menu": {
       if (menuEl){ closeMenu(); break; }
-      const list = isSuper() && UI.admin && UI.admin.envs.length ? UI.admin.envs.map(e=>({envId:e.id, name:e.name, sub:e.brokerName})) : ((UI.me && UI.me.envs) || []).map(e=>({envId:e.envId, name:e.name, sub:ROLES[e.role].label}));
+      const list = isSuper() && UI.admin && UI.admin.envs.length ? UI.admin.envs.map(e=>({envId:e.id, name:e.name, sub:e.brokerName})) : ((UI.me && UI.me.envs) || []).map(e=>({envId:e.envId, name:e.name, sub:(ROLE_INFO[e.role]||ROLES.cliente).label}));
       openMenu(t, `<div class="lbl">Ambientes</div>${list.map(e=>`<button data-action="enter-env" data-id="${e.envId}"><span class="ms">${UI.env && UI.env.id===e.envId?"check":"apartment"}</span><span>${esc(e.name)}<br><small style="color:var(--ink-3)">${esc(e.sub||"")}</small></span></button>`).join("")}${isSuper()?`<hr><button data-action="nav" data-view="brokers"><span class="ms">admin_panel_settings</span>Panel de brokers</button>`:""}`);
       if (isSuper() && !UI.admin) loadAdmin();
       break;
@@ -1522,6 +1602,29 @@ document.addEventListener("click", async e => {
       const m = (UI.team && UI.team.members || []).find(x=>x.email===id);
       openDlg(`<div class="dlg">${head("¿Quitar el acceso?")}<div class="dlg-body"><p style="margin:0;color:var(--ink-2)"><b>${esc(m ? m.name : id)}</b> (${esc(id)}) ya no va a poder entrar a ${esc(UI.env ? UI.env.name : "este ambiente")}. Lo que cargó queda guardado.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="remove-member-ok" data-id="${esc(id)}"><span class="ms">person_remove</span>Quitar acceso</button></div></div>`);
       break;
+    }
+    case "assign-broker": {
+      if (!UI.admin || UI.admin.loading || !UI.admin.envs.length){ try { UI.admin = await api("/admin/envs"); } catch(err){ snack(err.message); break; } }
+      const seen = new Set(), list = [];
+      for (const e of UI.admin.envs){ if (e.id === S.session.envId || seen.has(e.brokerEmail)) continue; seen.add(e.brokerEmail); list.push(e); }
+      const o = op();
+      if (!list.length){ snack("No hay otros brokers todavía. Invitalos desde el panel Brokers."); break; }
+      openDlg(`<form class="dlg" data-form="assign-broker">${head("Asignar broker a esta operación")}<div class="dlg-body">
+        <p style="margin:0 0 14px;color:var(--ink-2)">El broker elegido va a trabajar <b>${esc(o.name)}</b> como broker invitado, sin ver el resto de ${esc(UI.env ? UI.env.name : "este ambiente")}. Le aparece al instante, sin link de invitación.</p>
+        <div class="form"><div class="field"><label for="ab-broker">Broker</label><select id="ab-broker" required>${list.map(e=>`<option value="${esc(e.brokerEmail)}">${esc(e.brokerName)} · ${esc(e.name)}</option>`).join("")}</select></div></div>
+        <div id="ab-msg" class="found" style="color:var(--red)"></div>
+      </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit"><span class="ms">check</span>Asignar</button></div></form>`);
+      break;
+    }
+    case "remove-colab": {
+      const m = (UI.team && UI.team.members || []).find(x=>x.email===id); if (!m) break;
+      const rest = (m.opIds||[]).filter(x=>x!==op().id);
+      try {
+        if (rest.length) await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(id)}`, {method:"PUT", body:{opIds:rest}});
+        else await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(id)}`, {method:"DELETE"});
+        snack(`${m.name} ya no tiene acceso a esta operación`);
+      } catch(err){ snack(err.message); }
+      loadTeam(); break;
     }
     case "remove-member-ok": {
       try { await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(id)}`, {method:"DELETE"}); closeDlg(); snack("Acceso quitado"); } catch(err){ snack(err.message); }
@@ -1586,13 +1689,22 @@ document.addEventListener("submit", async e => {
   const kind = f.dataset.form, o = op();
   const val = id => { const el = $(id); return el ? el.value.trim() : ""; };
   const num = id => { const v = val(id); return v==="" ? "" : Number(v); };
+  if (kind === "assign-broker"){
+    const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+    try {
+      await syncNow();
+      const r = await api(`/admin/envs/${encodeURIComponent(S.session.envId)}/assign`, {method:"POST", body:{email: $("#ab-broker").value, opId: op().id}});
+      closeDlg(); snack(`${r.member.name} quedó asignado a ${op().name}`); loadTeam();
+    } catch(err){ $("#ab-msg").textContent = err.message; btn.disabled = false; }
+    return;
+  }
   if (kind === "invite"){
     const k = f.dataset.kind, btn = f.querySelector("button[type=submit]"), msg = $("#in-msg");
     const body = { type:k, name: val("#in-name") };
     if (k === "broker") body.envName = val("#in-env");
     else { body.envId = S.session.envId; }
     if (k === "asistente") body.opIds = [...f.querySelectorAll("input[name=in-ops]:checked")].map(x=>x.value);
-    if (k === "cliente") body.opId = op().id;
+    if (k === "cliente" || k === "colaborador") body.opId = op().id;
     btn.disabled = true;
     try { await syncNow(); const r = await api("/invites", {method:"POST", body}); showInviteLink(r.invite); if (k==="broker"){ UI.admin = null; render(); } else loadTeam(); }
     catch(err){ msg.textContent = err.message; btn.disabled = false; }
@@ -1632,8 +1744,10 @@ document.addEventListener("submit", async e => {
     if (id){ Object.assign(prop(id), data); logp(prop(id),"Datos editados"); closeDlg(); commit("Cambios guardados"); }
     else {
       const p = Object.assign({id:uid("p"), approval: isBroker()?"aprobada":"pendiente", status:"nueva", rank:null, offer:{price:"",deposit:"",docs:[]}, nego:{counter:"",docs:[]}, reserve:{progress:0,notary:false,costs:"",commission:"",deedDate:"",news:[]}, log:[], choiceNote:""}, data);
-      logp(p, `Cargada por ${ROLES[role()].label}${isBroker()?" y aprobada":""}`);
-      o.props.unshift(p); closeDlg(); UI.propFilter = "todas"; commit(isBroker() ? "Propiedad agregada y visible para el cliente" : "Propiedad agregada. Queda esperando la aprobación del broker");
+      logp(p, `Cargada por ${roleLabel()}${isBroker()?" y aprobada":""}`);
+      const target = ($("#f-op") && S.ops.find(x=>x.id===$("#f-op").value)) || o;
+      if (target !== o){ S.currentOp = target.id; if (UI.server===true){ SRV.opId = target.id; saveSrv(); } }
+      target.props.unshift(p); closeDlg(); UI.propFilter = "todas"; UI.view = "propiedades"; commit(isBroker() ? "Propiedad agregada y visible para el cliente" : "Propiedad agregada. Queda esperando la aprobación del broker");
     }
     return;
   }
@@ -1700,8 +1814,9 @@ document.addEventListener("submit", async e => {
   if (kind === "rename-op"){ o.name = val("#t-val"); closeDlg(); commit("Nombre actualizado"); return; }
 });
 
-window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if ((NAV.some(n=>n.id===h) || (h==="brokers" && isSuper())) && h!==UI.view){ UI.view = h; render(); } });
+window.addEventListener("hashchange", () => { if (/^#importar=/.test(location.hash)){ captureImport(); if (S.session) tryImport(); else render(); return; } const h = location.hash.slice(1); if ((NAV.some(n=>n.id===h) || (h==="brokers" && isSuper())) && h!==UI.view){ UI.view = h; render(); } });
 (function init(){
+  captureImport();
   const h = (location.hash||"").slice(1); if (NAV.some(n=>n.id===h) || h==="brokers") UI.view = h;
   try { const q = new URLSearchParams(location.search).get("op"); if (q && S.ops.some(o=>o.id===q)){ S.currentOp = q; if (!S.session) UI.loginRole = "cliente"; } } catch(e){}
   UI.booting = /^https?:$/.test(location.protocol);
@@ -1781,11 +1896,11 @@ window.__visitasLogin = (credential) => onGoogleCredential({ credential }); // u
 function srvLoginHTML(){
   const cfg = UI.cfg || {}, ready = cfg.ready || {};
   const inv = UI.inviteInfo;
-  const ROLE_TXT = { broker:"como broker, con tu propio ambiente", asistente:"como asistente", cliente:"a la búsqueda" };
+  const ROLE_TXT = { broker:"como broker, con tu propio ambiente", asistente:"como asistente", cliente:"a la búsqueda", colaborador:"como broker invitado" };
   let invHTML = "";
   if (UI.inviteError) invHTML = `<div class="note" style="background:var(--red-soft)"><span class="ms" style="color:var(--red)">link_off</span>${esc(UI.inviteError)}</div>`;
   else if (inv && inv.status !== "pendiente") invHTML = `<div class="note" style="background:var(--amber-soft)"><span class="ms" style="color:var(--amber)">link_off</span>Esta invitación está ${esc(inv.status)}. Si ya la usaste, ingresá con la misma cuenta de Google. Si no, pedí un link nuevo.</div>`;
-  else if (inv) invHTML = `<div class="invite-card"><span class="avatar av-${inv.type}"><span class="ms fill" style="font-size:18px">${ROLES[inv.type].icon}</span></span><div><b>${esc(inv.inviterName || "Te invitaron")}</b> te invitó ${inv.type==="cliente" ? `a la búsqueda <b>${esc(inv.opName || "")}</b> de` : ROLE_TXT[inv.type] + " en"} <b>${esc(inv.envName || "")}</b>.<small>Ingresá con tu cuenta de Google para aceptar. Vas a quedar asociado con esa cuenta.</small></div></div>`;
+  else if (inv) invHTML = `<div class="invite-card"><span class="avatar av-${inv.type}"><span class="ms fill" style="font-size:18px">${(ROLE_INFO[inv.type]||ROLES.cliente).icon}</span></span><div><b>${esc(inv.inviterName || "Te invitaron")}</b> te invitó ${inv.type==="cliente" ? `a la búsqueda <b>${esc(inv.opName || "")}</b> de` : inv.type==="colaborador" ? `como broker invitado en la operación <b>${esc(inv.opName || "")}</b> de` : ROLE_TXT[inv.type] + " en"} <b>${esc(inv.envName || "")}</b>.<small>Ingresá con tu cuenta de Google para aceptar. Vas a quedar asociado con esa cuenta.</small></div></div>`;
   const missing = [!ready.google && "GOOGLE_CLIENT_ID", !ready.secret && "AUTH_SECRET", !ready.superuser && "SUPERUSER_EMAILS"].filter(Boolean);
   return `<div class="login"><div class="login-card">
     <div class="logo"><span class="ms fill">holiday_village</span></div>
@@ -1838,8 +1953,9 @@ async function loadEnv(envId, keepRole){
   UI.env = d.env; UI.envRole = d.role; UI.team = null;
   S.ops = d.ops;
   SYNC.snap = {}; d.ops.forEach(o => SYNC.snap[o.id] = snapOf(o));
-  const role = (S.session.super && keepRole) ? S.session.role : d.role;
-  S.session = Object.assign({}, S.session, { role, envId, noAccess:false });
+  const colab = d.role === "colaborador";
+  const role = (S.session.super && keepRole) ? S.session.role : (colab ? "broker" : d.role);
+  S.session = Object.assign({}, S.session, { role, colab, envId, noAccess:false });
   S.currentOp = d.ops.some(o=>o.id===SRV.opId) ? SRV.opId : (d.ops[0] && d.ops[0].id) || null;
   SRV.envId = envId; SRV.opId = S.currentOp; saveSrv();
   if (UI.view === "brokers") UI.view = "propiedades";
@@ -1941,8 +2057,8 @@ async function uploadPhoto(dataUrl){
 const inviteUrl = (token) => location.origin + "/?invite=" + encodeURIComponent(token);
 function inviteDlg(kind, preset){
   const o = op();
-  const titles = { broker:"Invitar broker", asistente:"Invitar asistente", cliente: isStaff() ? "Invitar cliente" : "Invitar a otra persona a tu búsqueda" };
-  const sub = { broker:"Va a tener su propio ambiente, donde es el administrador.", asistente:"Va a trabajar solo en las operaciones que le asignes.", cliente: `Va a ver la búsqueda <b>${esc(o ? o.name : "")}</b> con los mismos permisos que ${isStaff() ? "el cliente" : "vos"}.` };
+  const titles = { broker:"Invitar broker", asistente:"Invitar asistente", cliente: isStaff() ? "Invitar cliente" : "Invitar a otra persona a tu búsqueda", colaborador:"Invitar a otro broker a esta operación" };
+  const sub = { broker:"Va a tener su propio ambiente, donde es el administrador.", asistente:"Va a trabajar solo en las operaciones que le asignes.", cliente: `Va a ver la búsqueda <b>${esc(o ? o.name : "")}</b> con los mismos permisos que ${isStaff() ? "el cliente" : "vos"}.`, colaborador:`Va a trabajar la operación <b>${esc(o ? o.name : "")}</b> como broker: aprobar propiedades, confirmar visitas e invitar clientes. No ve el resto de tus operaciones ni tu equipo.` };
   openDlg(`<form class="dlg" data-form="invite" data-kind="${kind}">${head(titles[kind])}<div class="dlg-body">
     <p style="margin:0 0 14px;color:var(--ink-2)">${sub[kind]} Le vas a compartir un link para que ingrese con su cuenta de Google.</p>
     <div class="form">
@@ -1958,6 +2074,7 @@ function showInviteLink(inv){
   const who = inv.name ? inv.name + ", t" : "T";
   const msg = inv.type === "cliente"
     ? `Hola ${inv.name||""}! Te comparto tu búsqueda de propiedades en ${inv.envName}. Entrá con tu cuenta de Google desde este link: ${url}`
+    : inv.type === "colaborador" ? `${who}e invito a trabajar juntos una operación de ${inv.envName} en Visitas Inmobiliarias. Entrá con tu cuenta de Google desde este link: ${url}`
     : `${who}e invito a ${inv.envName} en Visitas Inmobiliarias como ${ROLES[inv.type].label.toLowerCase()}. Entrá con tu cuenta de Google desde este link: ${url}`;
   openDlg(`<div class="dlg">${head("Link de invitación")}<div class="dlg-body">
     <p style="margin:0;color:var(--ink-2)">Compartile este link a <b>${esc(inv.name || "la persona invitada")}</b>. Sirve para una sola cuenta de Google y vence en 14 días.</p>
@@ -1973,9 +2090,9 @@ async function loadTeam(){
 }
 function srvOpPanelsHTML(o){
   if (!UI.team){ loadTeam(); UI.team = { loading:true, members:[], invites:[] }; }
-  const T = UI.team, staff = isStaff(), broker = isBroker();
+  const T = UI.team, staff = isStaff(), broker = isOwner();
   const fmtD = (t) => { const d = new Date(t); return d.getDate()+" "+MONTHS[d.getMonth()]; };
-  const invRow = (i) => `<div class="client-row"><span class="avatar av-${i.type}" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div class="info"><b>${esc(i.name || "Sin nombre")}</b><small>${ROLES[i.type].label} · invitación pendiente · vence ${fmtD(i.expires)}</small></div><button class="icon-btn" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}" title="Copiar link" aria-label="Copiar link"><span class="ms">content_copy</span></button><button class="icon-btn" data-action="revoke-invite" data-id="${esc(i.token)}" title="Anular invitación" aria-label="Anular invitación"><span class="ms">link_off</span></button></div>`;
+  const invRow = (i) => `<div class="client-row"><span class="avatar av-${i.type}" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div class="info"><b>${esc(i.name || "Sin nombre")}</b><small>${(ROLE_INFO[i.type]||ROLES.cliente).label} · invitación pendiente · vence ${fmtD(i.expires)}</small></div><button class="icon-btn" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}" title="Copiar link" aria-label="Copiar link"><span class="ms">content_copy</span></button><button class="icon-btn" data-action="revoke-invite" data-id="${esc(i.token)}" title="Anular invitación" aria-label="Anular invitación"><span class="ms">link_off</span></button></div>`;
   const opInvites = T.invites.filter(i => i.type==="cliente" && (i.opIds||[]).includes(o.id));
   const opClients = T.members.filter(m => m.role==="cliente" && (m.opIds||[]).includes(o.id));
   const access = `<section class="panel"><h2>${staff ? "Clientes con acceso" : "Personas en tu búsqueda"}</h2><p class="hint">${staff ? "Cada cliente entra con su cuenta de Google y ve solo esta operación." : "Pueden ver y opinar sobre las mismas propiedades que vos."}</p>
@@ -1985,6 +2102,13 @@ function srvOpPanelsHTML(o){
     ${!T.loading && !opClients.length && !opInvites.length ? '<small style="color:var(--ink-3)">Todavía nadie tiene acceso a esta búsqueda.</small>' : ""}
     <button class="btn btn-tonal" data-action="invite" data-kind="cliente" style="margin-top:12px"><span class="ms">person_add</span>${staff ? "Invitar cliente" : "Invitar a otra persona"}</button></section>`;
   if (!broker) return access;
+  const colabs = T.members.filter(m => m.role==="colaborador" && (m.opIds||[]).includes(o.id));
+  const colabInv = T.invites.filter(i => i.type==="colaborador" && (i.opIds||[]).includes(o.id));
+  const colabPanel = `<section class="panel"><h2>Brokers invitados</h2><p class="hint">Otros brokers que trabajan esta operación con vos. No ven el resto de tu ambiente.</p>
+    ${colabs.map(m=>`<div class="client-row"><span class="avatar av-broker"><span class="ms fill" style="font-size:18px">handshake</span></span><div class="info"><b>${esc(m.name)}</b><small>${esc(m.email)}</small></div><button class="icon-btn" data-action="remove-colab" data-id="${esc(m.email)}" title="Quitar de esta operación" aria-label="Quitar de esta operación"><span class="ms">person_remove</span></button></div>`).join("")}
+    ${colabInv.map(invRow).join("")}
+    ${!T.loading && !colabs.length && !colabInv.length ? '<small style="color:var(--ink-3)">No hay otros brokers en esta operación.</small>' : ""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-tonal" data-action="invite" data-kind="colaborador"><span class="ms">handshake</span>Invitar broker a esta operación</button>${isSuper()?`<button class="btn btn-filled" data-action="assign-broker"><span class="ms">admin_panel_settings</span>Asignar broker existente</button>`:""}</div></section>`;
   const asis = T.members.filter(m => m.role==="asistente");
   const asisInv = T.invites.filter(i => i.type==="asistente");
   const team = `<section class="panel"><h2>Asistentes</h2><p class="hint">Cada asistente ve solo las operaciones que le asignes.</p>
@@ -1994,7 +2118,7 @@ function srvOpPanelsHTML(o){
     ${asisInv.map(invRow).join("")}
     ${!T.loading && !asis.length && !asisInv.length ? '<small style="color:var(--ink-3)">Todavía no tenés asistentes.</small>' : ""}
     <button class="btn btn-tonal" data-action="invite" data-kind="asistente" style="margin-top:12px"><span class="ms">person_add</span>Invitar asistente</button></section>`;
-  return access + team;
+  return access + colabPanel + team;
 }
 
 /* ---------- panel de superusuario ---------- */
@@ -2020,7 +2144,7 @@ function brokersHTML(){
   <div class="section-title" style="margin-top:0"><h2>Ambientes</h2><span class="count num">${A.envs.length}</span></div>
   ${A.loading ? '<div class="empty">Cargando…</div>' : A.envs.length ? `<div class="grid">${A.envs.map(e=>`<article class="panel env-card ${e.active?"":"off"}">
       <div style="display:flex;gap:10px;align-items:center"><span class="avatar av-broker">${esc(initials(e.brokerName))}</span><div style="min-width:0"><h3>${esc(e.name)}</h3><small style="color:var(--ink-3)">${esc(e.brokerName)} · ${esc(e.brokerEmail)}</small></div></div>
-      <dl class="kv" style="margin:12px 0;font-size:13px"><dt>Operaciones</dt><dd>${e.ops}</dd><dt>Asistentes</dt><dd>${e.asistentes}</dd><dt>Clientes</dt><dd>${e.clientes}</dd><dt>Desde</dt><dd>${fmtD(e.created)}</dd></dl>
+      <dl class="kv" style="margin:12px 0;font-size:13px"><dt>Operaciones</dt><dd>${e.ops}</dd><dt>Asistentes</dt><dd>${e.asistentes}</dd><dt>Clientes</dt><dd>${e.clientes}</dd>${e.colaboradores?`<dt>Brokers invitados</dt><dd>${e.colaboradores}</dd>`:""}<dt>Desde</dt><dd>${fmtD(e.created)}</dd></dl>
       ${e.active ? "" : '<span class="status s-rechazada" style="margin-bottom:10px">Desactivado</span>'}
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-filled btn-sm" data-action="enter-env" data-id="${e.id}"><span class="ms">login</span>Entrar</button><button class="btn btn-text btn-sm" data-action="toggle-env" data-id="${e.id}" data-active="${e.active}">${e.active ? "Desactivar" : "Activar"}</button></div>
     </article>`).join("")}</div>` : `<div class="empty"><span class="ms">apartment</span>Todavía no hay brokers. Invitá al primero.</div>`}`;
