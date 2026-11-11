@@ -1,7 +1,7 @@
 // Lee un aviso de Zonaprop, RE/MAX, Argenprop o Mercado Libre y devuelve sus datos.
 // GET /api/leer-aviso?url=<link del aviso>
 // Respuesta: { portal, url, source, fields: {...}, photos: [...], text }
-//   fields: title, price, currency, expensas, m2, amb, banos, cocheras, piso, pisos, address, barrio, phone
+//   fields: title, price, currency, expensas, m2, m2cub, balcon, amb, banos, cocheras, piso, pisos, address, barrio, phone
 //   text: texto plano del aviso; la app lo usa para completar lo que falte.
 //
 // Variables de entorno opcionales (Netlify > Site configuration > Environment variables):
@@ -96,13 +96,15 @@ async function fromMercadoLibreApi(href) {
     priceOther: it.currency_id !== "USD" ? it.price : null,
     expensas: num(attr.MAINTENANCE_FEE),
     m2: num(attr.TOTAL_AREA) ?? num(attr.COVERED_AREA),
+    m2cub: num(attr.COVERED_AREA),
+    balcon: attr.HAS_BALCONY != null ? (/^s[ií]|yes|true/i.test(String(attr.HAS_BALCONY)) ? "Sí" : "No") : null,
     amb: num(attr.ROOMS),
     banos: num(attr.FULL_BATHROOMS),
     cocheras: num(attr.PARKING_LOTS),
     piso: attr.UNIT_FLOOR ?? null,
     pisos: num(attr.FLOORS),
     address: loc.address_line || null,
-    barrio: loc.neighborhood?.name || null
+    barrio: [loc.neighborhood?.name, loc.city?.name].filter(Boolean).join(", ") || null
   });
   const photos = (it.pictures || []).map(p => p.secure_url || p.url).filter(Boolean).slice(0, MAX_PHOTOS);
   return { source: "api_mercadolibre", fields, photos, text: [it.title, text].filter(Boolean).join("\n") };
