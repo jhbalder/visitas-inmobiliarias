@@ -63,13 +63,52 @@ export async function requireUser(req) {
 }
 
 /* ---------- Google ---------- */
+// Verifica el ingreso de Google. Primero localmente con las claves públicas de Google (rápido, sin depender
+// de tokeninfo); si eso no se puede, consulta tokeninfo. Cada pedido a Google se reintenta una vez.
+let _certs = null, _certsAt = 0;
+async function fetchRetry(url) {
+  let last;
+  for (let i = 0; i < 2; i++) {
+    try { const r = await fetch(url, { signal: AbortSignal.timeout(7000) }); if (r.status < 500) return r; last = new Error("HTTP " + r.status); }
+    catch (e) { last = e; }
+  }
+  throw last;
+}
+async function googleCerts() {
+  if (_certs && Date.now() - _certsAt < 3600e3) return _certs;
+  const r = await fetchRetry("https://www.googleapis.com/oauth2/v3/certs");
+  const j = await r.json();
+  _certs = j.keys || []; _certsAt = Date.now();
+  return _certs;
+}
+const b64json = (x) => JSON.parse(Buffer.from(x, "base64url").toString("utf8"));
+async function verifyLocal(credential) {
+  const [h, pl, sig] = String(credential).split(".");
+  if (!h || !pl || !sig) return null;
+  const head = b64json(h);
+  if (head.alg !== "RS256") return null;
+  const jwk = (await googleCerts()).find((k) => k.kid === head.kid);
+  if (!jwk) return null;
+  const ok = crypto.verify("RSA-SHA256", Buffer.from(h + "." + pl), crypto.createPublicKey({ key: jwk, format: "jwk" }), Buffer.from(sig, "base64url"));
+  if (!ok) fail(401, "google", "Google no validó el ingreso. Probá de nuevo.");
+  const p = b64json(pl);
+  if (!p.exp || p.exp * 1000 < Date.now() - 60e3) fail(401, "google", "El ingreso de Google venció. Probá de nuevo.");
+  return p;
+}
 export async function verifyGoogle(credential) {
   if (globalThis.__TEST_GOOGLE) return globalThis.__TEST_GOOGLE(credential); // solo pruebas locales
   const cid = process.env.GOOGLE_CLIENT_ID;
   if (!cid) fail(500, "config", "Falta configurar GOOGLE_CLIENT_ID en Netlify.");
-  const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(credential), { signal: AbortSignal.timeout(6000) });
-  if (!r.ok) fail(401, "google", "Google no validó el ingreso. Probá de nuevo.");
-  const p = await r.json();
+  let p = null;
+  try { p = await verifyLocal(credential); }
+  catch (e) { if (e instanceof HttpError) throw e; console.error("Verificación local de Google:", e); }
+  if (!p) {
+    let r;
+    try { r = await fetchRetry("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(credential)); }
+    catch (e) { fail(503, "google_red", "No pudimos validar tu cuenta con Google. Probá de nuevo en unos segundos."); }
+    if (!r.ok) fail(401, "google", "Google no validó el ingreso. Probá de nuevo.");
+    p = await r.json();
+  }
   if (p.aud !== cid) fail(401, "google", "El ingreso no corresponde a esta aplicación.");
   if (!["accounts.google.com", "https://accounts.google.com"].includes(p.iss)) fail(401, "google", "Emisor no válido.");
   if (!(p.email_verified === true || p.email_verified === "true")) fail(401, "google", "La cuenta de Google no tiene el mail verificado.");
@@ -97,7 +136,7 @@ export async function envContext(user, envId) {
   if (!meta) fail(404, "ambiente", "El ambiente no existe.");
   if (user.super) return { meta, role: "broker", super: true, opIds: null };
   if (meta.active === false) fail(403, "desactivado", "Este ambiente está desactivado. Consultá con el administrador.");
-  const m = (meta.members || []).find((x) => x.email === user.email);
+  const m = (Array.isArray(meta.members) ? meta.members : []).find((x) => x && x.email === user.email);
   if (!m) fail(403, "sin_acceso", "Tu cuenta no tiene acceso a este ambiente.");
   return { meta, role: m.role, opIds: m.opIds || [], member: m };
 }
