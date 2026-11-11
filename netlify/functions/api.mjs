@@ -57,8 +57,9 @@ export default async (req) => {
     fail(404, "no_encontrado", "Ruta no encontrada.");
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.code, message: e.message, ...(e.extra || {}) }, e.status);
-    console.error(e);
-    return json({ error: "error", message: "Ocurrió un error en el servidor. Probá de nuevo." }, 500);
+    console.error("API", req.method, new URL(req.url).pathname, e);
+    const detail = String((e && (e.name + ": " + e.message)) || e).slice(0, 200);
+    return json({ error: "error", message: "Ocurrió un error en el servidor. Probá de nuevo.", detail }, 500);
   }
 };
 
@@ -79,7 +80,8 @@ async function me(user) {
   const u = (await getUser(user.email)) || { email: user.email, name: user.name, envIds: [] };
   const envs = [];
   for (const envId of u.envIds || []) {
-    const meta = await getJSON(metaKey(envId));
+    let meta = null;
+    try { meta = await getJSON(metaKey(envId)); } catch (e) { console.error("meta", envId, e); continue; }
     const mem = meta && (meta.members || []).find((x) => x.email === user.email);
     if (!meta || !mem) continue;
     envs.push({ envId, name: meta.name, brokerName: meta.brokerName, role: mem.role, opIds: mem.opIds || [], active: meta.active !== false });
@@ -216,8 +218,11 @@ async function listInvites(scope) {
 /* ---------- ambiente y operaciones ---------- */
 async function loadOps(envId) {
   const ops = [];
-  for (const k of await listKeys(`envs/${envId}/ops/`)) { const op = await getJSON(k); if (op) ops.push(op); }
-  return ops.sort((x, y) => (x.created || "").localeCompare(y.created || ""));
+  for (const k of await listKeys(`envs/${envId}/ops/`)) {
+    try { const op = await getJSON(k); if (op && typeof op === "object") ops.push(op); }
+    catch (e) { console.error("No se pudo leer", k, e); } // una operación dañada no bloquea el ambiente
+  }
+  return ops.sort((x, y) => String(x.created || "").localeCompare(String(y.created || "")));
 }
 async function getEnv(user, envId) {
   const ctx = await envContext(user, envId);
