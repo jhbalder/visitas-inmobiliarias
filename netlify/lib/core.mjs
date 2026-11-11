@@ -3,11 +3,11 @@ import crypto from "node:crypto";
 import { getStore } from "@netlify/blobs";
 
 /* ---------- almacenamiento (Netlify Blobs) ---------- */
-let _store = null;
+// El acceso a Blobs se crea en cada uso: Netlify entrega credenciales nuevas en cada pedido y las
+// guardadas de un pedido anterior vencen («Failed to decode token: Token expired»).
 export function db() {
   if (globalThis.__MEMSTORE) return globalThis.__MEMSTORE; // solo pruebas locales
-  if (!_store) _store = getStore({ name: "visitas", consistency: "strong" });
-  return _store;
+  return getStore({ name: "visitas", consistency: "strong" });
 }
 export const getJSON = (key) => db().get(key, { type: "json" });
 export const setJSON = (key, val) => db().setJSON(key, val);
