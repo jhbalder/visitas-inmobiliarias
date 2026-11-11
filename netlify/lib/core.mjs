@@ -170,8 +170,8 @@ function appendLogs(target, incoming) {
 export function mergeClient(stored, inc, email) {
   const out = structuredClone(stored);
   const ip = new Map((inc.props || []).map((p) => [p.id, p]));
-  const from = ["nueva", "leida", "descartada", "por_visitar"];
-  const to = ["nueva", "leida", "descartada", "por_visitar", "oferta"];
+  const from = ["nueva", "leida", "para_agendar", "descartada", "por_visitar"];
+  const to = ["nueva", "leida", "para_agendar", "descartada", "por_visitar", "oferta"];
   for (const sp of out.props || []) {
     if (sp.approval !== "aprobada") continue;
     const p = ip.get(sp.id); if (!p) continue;

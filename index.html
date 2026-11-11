@@ -119,7 +119,8 @@ a{color:var(--primary)}
 .status{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:650;white-space:nowrap}
 .status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .s-nueva{background:var(--blue-soft);color:var(--blue)}
-.s-leida{background:var(--android-soft);color:var(--primary)}
+.s-leida{background:var(--surface-3);color:var(--ink-2)}
+.s-para_agendar{background:var(--android-soft);color:var(--primary)}
 .s-por_visitar{background:var(--violet-soft);color:var(--violet)}
 .s-oferta{background:var(--amber-soft);color:var(--amber)}
 .s-negociacion{background:var(--orange-soft);color:var(--orange)}
@@ -290,6 +291,9 @@ details.discarded[open] summary .ms{transform:rotate(90deg)}
 .searchbar>.ms{color:var(--ink-3)}
 .searchbar input{flex:1;border:0;background:transparent;font:inherit;font-size:15px;outline:none;min-width:0;height:100%}
 .searchbar input::-webkit-search-cancel-button{display:none}
+.rank-addr{display:block;color:var(--ink-2)!important;line-height:1.3;margin:2px 0}
+.dlg-sub{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:400;color:var(--ink-2);margin-top:4px;letter-spacing:0}.dlg-sub .ms{font-size:17px}
+.bcard .addr-line{display:block;color:var(--ink-2)!important}
 .inv-link{display:block;font-size:12px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:6px 8px;margin-top:6px;word-break:break-all;user-select:all}
 .slot-line{display:flex!important;align-items:center;gap:4px}
 .mini-x{border:0;background:none;width:22px;height:22px;border-radius:11px;display:grid;place-items:center;cursor:pointer;color:var(--ink-3);padding:0}
@@ -462,12 +466,19 @@ const ROLES = {
 };
 const ROLE_INFO = Object.assign({}, ROLES, { colaborador:{label:"Broker invitado",icon:"handshake",desc:"Trabaja una operación puntual como broker"}, broker_env:{label:"Broker",icon:"verified_user",desc:"Broker del ambiente"} });
 const STATUS = {
-  nueva:{label:"Nueva"}, leida:{label:"Leída"}, por_visitar:{label:"Por visitar"},
+  nueva:{label:"Nueva"}, leida:{label:"Leída"}, para_agendar:{label:"Para agendar"}, por_visitar:{label:"Por visitar"},
   oferta:{label:"Oferta"}, negociacion:{label:"En negociación"}, reservada:{label:"Reservada"}, descartada:{label:"Descartada"}
 };
 const STATUS_KEYS = Object.keys(STATUS);
 // El cliente pidió verla («Quiero verla»): recién ahí se puede agendar.
-const wanted = p => !!p && p.approval==="aprobada" && p.rank != null && !["nueva","descartada"].includes(p.status);
+// Seguimiento: Nueva -> Leída (el cliente la abrió) -> Para agendar («Quiero verla») -> Por visitar -> ...
+const wanted = p => !!p && p.approval==="aprobada" && !["nueva","leida","descartada"].includes(p.status);
+// Datos anteriores: «leída con prioridad» significaba que el cliente quería verla.
+function migrateOp(o){ (o && o.props || []).forEach(p => { if (p.status==="leida" && p.rank!=null) p.status = "para_agendar"; }); return o; }
+function markRead(p){
+  if (!p || isStaff() || p.status!=="nueva" || p.approval!=="aprobada") return false;
+  p.status = "leida"; logp(p, `${S.session.name} la vio`); return true;
+}
 const RATING = {
   encanto:{label:"Me encantó",icon:"favorite"},
   interesante:{label:"Interesante",icon:"thumb_up"},
@@ -508,6 +519,8 @@ function placeholder(seed){
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p[3]}"/><stop offset="1" stop-color="${p[0]}"/></linearGradient></defs><rect width="400" height="250" fill="url(#g)"/><circle cx="${320-(h%80)}" cy="62" r="26" fill="${p[1]}" opacity=".55"/><rect x="${bx}" y="${by}" width="${bw}" height="${250-by}" rx="10" fill="${p[2]}"/>${win}<rect x="${bx+bw+18}" y="170" width="110" height="80" rx="8" fill="${p[1]}"/><path d="M${bx+bw+10} 176 L${bx+bw+73} 132 L${bx+bw+136} 176 Z" fill="${p[2]}" opacity=".85"/><rect x="${bx+bw+60}" y="206" width="26" height="44" rx="4" fill="${p[3]}"/><rect y="238" width="400" height="12" fill="${p[2]}" opacity=".25"/></svg>`;
   return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
 }
+// Dirección para diferenciar propiedades en todas las vistas
+const addrOf = p => [p && p.address, p && p.barrio].filter(Boolean).join(", ") || "Sin dirección";
 const cover = p => (p.photos && p.photos[0]) || placeholder(p.id + p.title);
 
 function detectPortal(url){
@@ -609,7 +622,7 @@ function seed(){
       offer:{price:232000,deposit:5000,docs:[{name:"Oferta firmada - Echeverría 3100.pdf",size:186000}]},
       nego:{counter:238000,docs:[{name:"Contraoferta propietario.pdf",size:94000}]},
       log:[{date:ymd(addDays(t,-10)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-3)),text:"Visita realizada · Me encantó"},{date:ymd(addDays(t,-2)),text:"Oferta enviada: USD 232.000 con USD 5.000 de depósito"},{date:ymd(addDays(t,-1)),text:"Contraoferta del propietario: USD 238.000"}]}),
-    P({id:"p3",title:"Departamento 3 ambientes a estrenar",barrio:"Núñez",address:"Av. del Libertador 7200",amb:3,price:215000,expensas:240000,m2:74,banos:2,cocheras:1,piso:9,pisos:14,phone:"+54 11 3998-2075",portal:"RE/MAX",url:"https://www.remax.com.ar/listings/departamento-3-ambientes-nunez",status:"leida",rank:3,log:[{date:ymd(addDays(t,-4)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-2)),text:"El cliente la marcó para visitar (prioridad 3)"}]}),
+    P({id:"p3",title:"Departamento 3 ambientes a estrenar",barrio:"Núñez",address:"Av. del Libertador 7200",amb:3,price:215000,expensas:240000,m2:74,banos:2,cocheras:1,piso:9,pisos:14,phone:"+54 11 3998-2075",portal:"RE/MAX",url:"https://www.remax.com.ar/listings/departamento-3-ambientes-nunez",status:"para_agendar",rank:3,log:[{date:ymd(addDays(t,-4)),text:"Aprobada por Broker"},{date:ymd(addDays(t,-2)),text:"El cliente la marcó para visitar (prioridad 3)"}]}),
     P({id:"p4",title:"Departamento 2 ambientes luminoso",barrio:"Colegiales",address:"Conesa 900",amb:2,price:139000,expensas:120000,m2:52,banos:1,cocheras:0,piso:3,pisos:6,phone:"+54 11 6011-3321",portal:"Mercado Libre",url:"https://inmuebles.mercadolibre.com.ar/departamento-2-ambientes-colegiales",status:"nueva",log:[{date:ymd(addDays(t,-1)),text:"Aprobada por Broker"}]}),
     P({id:"p5",title:"Departamento 3 ambientes reciclado",barrio:"Villa Crespo",address:"Thames 400",amb:3,price:168000,expensas:150000,m2:70,banos:1,cocheras:0,piso:2,pisos:5,phone:"+54 11 5590-8812",portal:"Zonaprop",url:"https://www.zonaprop.com.ar/propiedades/departamento-3-ambientes-villa-crespo-thames.html",approval:"pendiente",log:[{date:ymd(t),text:"Cargada por Asistente"}]}),
     P({id:"p6",title:"Casa 4 ambientes con jardín",barrio:"Coghlan",address:"Washington 3400",amb:4,price:289000,expensas:0,m2:160,banos:3,cocheras:1,piso:"PB",pisos:2,phone:"+54 11 4544-7720",portal:"RE/MAX",url:"https://www.remax.com.ar/listings/casa-4-ambientes-coghlan",approval:"pendiente",log:[{date:ymd(t),text:"Cargada por Asistente"}]}),
@@ -640,6 +653,7 @@ function save(){ if (UI.server === true) { scheduleSync(); return; } try { local
 
 const emptyState = () => ({session:null, currentOp:null, ops:[]});
 let S = load() || emptyState();
+(S.ops||[]).forEach(migrateOp);
 const UI = { server:null, adminLogin:false, view:"propiedades", propFilter:"todas", weekStart:null, tmpPhotos:[], loginRole:"broker", loginDays:[1,2,3,4,5], visitRating:null, confirmDelete:null };
 
 const op = () => S.ops.find(o => o.id === S.currentOp) || S.ops[0] || null;
@@ -657,7 +671,7 @@ function notices(o){ o = o||op(); o.notices = o.notices || []; return o.notices;
 function unread(){ const r = role(); return notices().filter(n => !(n.seen||[]).includes(r)); }
 function notify(text, extra){ notices().unshift(Object.assign({id:uid("n"), date:nowStamp(), at:new Date().toISOString(), text, seen:[]}, extra||{})); }
 function logp(p, text){ p.log = p.log || []; p.log.push({date:nowStamp(), text}); }
-function ranked(o){ return (o||op()).props.filter(p => p.approval==="aprobada" && p.rank!=null && p.status!=="descartada" && p.status!=="nueva").sort((a,b)=>a.rank-b.rank); }
+function ranked(o){ return (o||op()).props.filter(p => p.approval==="aprobada" && p.rank!=null && !["descartada","nueva","leida"].includes(p.status)).sort((a,b)=>a.rank-b.rank); }
 function renumber(){ ranked().forEach((p,i)=> p.rank = i+1); }
 function weekMonday(d){ const x = new Date(d); const wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
 function inPrefs(date, time, dur){
@@ -814,7 +828,7 @@ function propCard(p, opts={}){
   const nPhotos = (p.photos||[]).length;
   let actions = "";
   if (!staff){
-    if (p.status==="nueva") actions = `<button class="btn btn-tonal btn-sm" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text btn-sm" data-action="discard" data-id="${p.id}">Descartar</button>`;
+    if (p.status==="nueva" || p.status==="leida") actions = `<button class="btn btn-tonal btn-sm" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text btn-sm" data-action="discard" data-id="${p.id}">Descartar</button>`;
     else if (p.status==="descartada") actions = `<button class="btn btn-text btn-sm" data-action="restore" data-id="${p.id}"><span class="ms">undo</span>Volver a considerar</button>`;
   } else if (isBroker() && p.approval==="pendiente"){
     actions = `<button class="btn btn-filled btn-sm" data-action="approve" data-id="${p.id}"><span class="ms">check</span>Aprobar</button><button class="btn btn-text btn-sm" data-action="reject" data-id="${p.id}">Rechazar</button>`;
@@ -838,7 +852,7 @@ function propCard(p, opts={}){
   return `<article data-search="${esc(searchKey(p))}" class="pcard ${opts.dim?'dim':''}${lo?' linkonly':''}" data-action="${lo?"open-src":"open"}" data-id="${p.id}" tabindex="0" aria-label="${esc(p.title)}${lo?" (abre el aviso original)":""}">
     <div class="pimg">${lo && !(p.photos||[]).length ? `<div class="srcph"><span class="ms">open_in_new</span><b>Ver aviso en ${esc(p.portal||"la inmobiliaria")}</b><small>Se abre en una pestaña nueva</small></div>` : `<img referrerpolicy="no-referrer" src="${cover(p)}" alt="">`}
       <div class="tl">${appr}${st}</div>
-      ${p.rank && p.status!=="descartada" && p.status!=="nueva" ? `<span class="rankbadge" title="Prioridad del cliente">#${p.rank}</span>`:""}
+      ${p.rank && !["descartada","nueva","leida"].includes(p.status) ? `<span class="rankbadge" title="Prioridad del cliente">#${p.rank}</span>`:""}
       ${p.portal?`<span class="portal">${esc(p.portal)}</span>`:""}
       ${nPhotos>1?`<span class="photo-count"><span class="ms">photo_library</span>${nPhotos}</span>`:""}
     </div>
@@ -846,7 +860,7 @@ function propCard(p, opts={}){
       <div class="price">${lo && (p.price==null||p.price==="") ? `<span style="font-size:18px">Precio en el aviso</span>` : usd(p.price)}</div>
       ${lo && !p.expensas ? "" : `<div class="exp">${p.expensas? "+ "+ars(p.expensas)+" expensas" : "Sin expensas"}</div>`}
       <h3>${esc(p.title)}</h3>
-      ${p.barrio||p.address ? `<div class="loc"><span class="ms">location_on</span>${esc(p.barrio||"")}${p.barrio&&p.address?" · ":""}${esc(p.address||"")}</div>` : ""}
+      <div class="loc"><span class="ms">location_on</span>${esc(addrOf(p))}</div>
       ${lo && !hasSpecs ? `<div class="loc"><span class="ms">link</span>${esc(hostName(p.url))}</div>` : `<div class="specs">
         <span><span class="ms">meeting_room</span>${fmtNum(p.amb)} amb</span>
         <span title="${p.m2cub?fmtNum(p.m2cub)+" m² cubiertos":"m² totales"}"><span class="ms">square_foot</span>${fmtNum(p.m2)} m²${p.m2cub && p.m2cub!==p.m2 ? ` <small style="color:var(--ink-3)">(${fmtNum(p.m2cub)} cub.)</small>` : ""}</span>
@@ -921,7 +935,7 @@ function rankListHTML(editable){
     <li class="rank-item">
       <span class="no">${p.rank}</span>
       <img referrerpolicy="no-referrer" src="${cover(p)}" alt="">
-      <button class="t" data-action="open" data-id="${p.id}" style="border:0;background:none;text-align:left;cursor:pointer;padding:0"><b>${esc(p.title)}</b><small>${esc(p.barrio)} · ${usd(p.price)}</small><br><span class="status s-${p.status}" style="margin-top:4px">${STATUS[p.status].label}</span></button>
+      <button class="t" data-action="open" data-id="${p.id}" style="border:0;background:none;text-align:left;cursor:pointer;padding:0"><b>${esc(p.title)}</b><small class="rank-addr">${esc(addrOf(p))}</small><small>${usd(p.price)}</small><span class="status s-${p.status}" style="margin-top:4px">${STATUS[p.status].label}</span></button>
       ${editable?`<span class="mv"><button class="icon-btn" data-action="rank-up" data-id="${p.id}" ${i===0?"disabled":""} aria-label="Subir prioridad"><span class="ms">arrow_upward</span></button><button class="icon-btn" data-action="rank-down" data-id="${p.id}" ${i===list.length-1?"disabled":""} aria-label="Bajar prioridad"><span class="ms">arrow_downward</span></button></span>`:"<span></span>"}
     </li>`).join("")}</ol>`;
 }
@@ -929,7 +943,7 @@ function propsHTML(){
   const o = op();
   if (!isStaff()){
     const visible = o.props.filter(p=>p.approval==="aprobada");
-    const fresh = visible.filter(p=>p.status==="nueva");
+    const fresh = visible.filter(p=>p.status==="nueva" || p.status==="leida");
     const disc = visible.filter(p=>p.status==="descartada");
     const conf = o.visits.filter(v=>v.state==="confirmada" && parseYmd(v.date)>=today()).length;
     if (!UI.clientTab) UI.clientTab = "todas";
@@ -1014,7 +1028,7 @@ function agendaHTML(){
       const s = toMin(v.time), dur = v.duration||45;
       const past = parseYmd(v.date) < today();
       const cls = past ? "done" : v.state;
-      return `<button class="ev ${cls}" style="top:${(s-H0*60)/60*ROWH+1}px;height:${Math.max(dur/60*ROWH-2,30)}px" data-action="open-visit" data-id="${v.id}"><b>${esc(p.title)}</b><small>${v.time} · ${esc(p.barrio)}</small></button>`;
+      return `<button class="ev ${cls}" style="top:${(s-H0*60)/60*ROWH+1}px;height:${Math.max(dur/60*ROWH-2,30)}px" data-action="open-visit" data-id="${v.id}"><b>${esc(p.title)}</b><small>${v.time} · ${esc(p.address || p.barrio || "")}</small></button>`;
     }).join("");
     let nowLine = "";
     if (ds===tStr){ const m = now.getHours()*60+now.getMinutes(); if (m>=H0*60 && m<=H1*60) nowLine = `<div class="now-line" style="top:${(m-H0*60)/60*ROWH}px"></div>`; }
@@ -1074,6 +1088,7 @@ function visitCard(v){
     <div class="vt">
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="status s-${v.state==="rechazada"&&v.rejectedBy==="cliente"?"rechazada_cliente":v.state}">${v.state==="propuesta"?"Propuesta":v.state==="confirmada"?(past?"Realizada":"Confirmada"):v.rejectedBy==="cliente"?"El cliente no puede":"Rechazada"}</span><small class="num" style="color:var(--ink-3)">${v.duration||45} min</small></div>
       <h3><button data-action="open" data-id="${p.id}" style="all:unset;cursor:pointer">${esc(p.title)}</button></h3>
+      ${v.address && v.address.trim() ? "" : `<small style="color:var(--ink-2)">${esc(addrOf(p))}</small>`}
       <a class="addr" href="${mapsUrl(v.address)}" target="_blank" rel="noopener" style="color:var(--ink-2)">${esc(v.address)}</a>
       ${staff && out && v.state!=="rechazada" && !past ? `<div class="warn"><span class="ms">warning</span>Fuera de los horarios que indicó el cliente</div>`:""}
       ${v.state==="rechazada"&&v.rejectedBy==="cliente"&&staff?`<div class="result"><b>${esc(v.rejectedName||"El cliente")}</b>${v.clientReason?": "+esc(v.clientReason):" no indicó motivo"}</div>`:""}
@@ -1096,7 +1111,7 @@ function pipelineHTML(){
     if (p.status==="reservada") extra += `<dl class="kv"><dt>Escritura</dt><dd>${p.reserve.deedDate?fmtDateShort(p.reserve.deedDate):"—"}</dd><dt>Avance</dt><dd>${p.reserve.progress||0}%</dd></dl><div class="progress"><i style="width:${p.reserve.progress||0}%"></i></div>`;
     if (p.status==="descartada" && p.choiceNote) extra += `<small>${esc(p.choiceNote)}</small>`;
     const docs = (p.offer.docs.length + p.nego.docs.length);
-    return `<button class="bcard" data-action="open" data-id="${p.id}"><div class="top"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.barrio)} · ${usd(p.price)}</small></div></div>${p.rank&&!["nueva","descartada"].includes(p.status)?`<small>Prioridad #${p.rank}</small>`:""}${extra}${docs?`<small><span class="ms" style="font-size:14px;vertical-align:-2px">attach_file</span> ${docs} ${docs===1?"documento":"documentos"}</small>`:""}</button>`;
+    return `<button class="bcard" data-action="open" data-id="${p.id}"><div class="top"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small class="addr-line">${esc(addrOf(p))}</small><small style="display:block">${usd(p.price)}</small></div></div>${p.rank&&!["nueva","leida","descartada"].includes(p.status)?`<small>Prioridad #${p.rank}</small>`:""}${extra}${docs?`<small><span class="ms" style="font-size:14px;vertical-align:-2px">attach_file</span> ${docs} ${docs===1?"documento":"documentos"}</small>`:""}</button>`;
   };
   return `
   <div class="page-head"><div><h1>Seguimiento</h1><div class="sub">Cada propiedad avanza de Nueva a Reservada. ${staff?"Abrí una tarjeta para cargar ofertas, contraofertas, documentos y novedades.":"Acá ves en qué etapa está cada propiedad."}</div></div></div>
@@ -1282,6 +1297,7 @@ function resizeImage(file){
 
 function detailDlg(p){
   const staff = isStaff();
+  if (markRead(p)) commit();
   const photos = (p.photos&&p.photos.length) ? p.photos : [cover(p)];
   const visits = op().visits.filter(v=>v.propId===p.id && v.state!=="rechazada").sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const docList = (arr, kind) => `<ul class="doclist">${arr.map((d,i)=>`<li><span class="ms" style="font-size:18px;color:var(--ink-3)">description</span><span class="t">${esc(d.name)}</span><small>${kb(d.size)}</small>${staff?`<button type="button" class="icon-btn" style="width:30px;height:30px" data-action="rm-doc" data-kind="${kind}" data-i="${i}" data-id="${p.id}" aria-label="Quitar documento"><span class="ms" style="font-size:18px">close</span></button>`:""}</li>`).join("")||`<li style="color:var(--ink-3)">Sin documentos</li>`}</ul>${staff?`<label class="btn btn-outline btn-sm" style="align-self:flex-start"><span class="ms">upload_file</span>Subir documento<input type="file" hidden multiple data-upload="${kind}" data-id="${p.id}"></label>`:""}`;
@@ -1298,10 +1314,10 @@ function detailDlg(p){
     if (["oferta","negociacion"].includes(p.status)) stage = `<div class="box"><h3><span class="ms">request_quote</span>${STATUS[p.status].label}</h3><div class="facts" style="margin:0">${ro("Ofrecido",usd(p.offer.price))}${ro("Depósito",usd(p.offer.deposit))}${p.status==="negociacion"?ro("Contraoferta",usd(p.nego.counter)):""}</div><b style="font-size:13px">Documentos</b>${docList(p.offer.docs.concat(p.nego.docs),"none")}</div>`;
     if (p.status==="reservada") stage = reserveRO(p);
   }
-  const clientActions = !staff ? (p.status==="nueva" ? `<button class="btn btn-tonal" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>` : p.status==="descartada" ? `<button class="btn btn-text" data-action="restore" data-id="${p.id}"><span class="ms">undo</span>Volver a considerar</button>` : `<button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>`) : "";
+  const clientActions = !staff ? (["nueva","leida"].includes(p.status) ? `<button class="btn btn-tonal" data-action="want" data-id="${p.id}"><span class="ms">visibility</span>Quiero verla</button><button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>` : p.status==="descartada" ? `<button class="btn btn-text" data-action="restore" data-id="${p.id}"><span class="ms">undo</span>Volver a considerar</button>` : `<button class="btn btn-text" data-action="discard" data-id="${p.id}">Descartar</button>`) : "";
   const brokerActions = isBroker() && p.approval==="aprobada" ? `<button class="btn btn-text" data-action="unapprove" data-id="${p.id}"><span class="ms">visibility_off</span>Desaprobar</button>` : isBroker() && p.approval!=="aprobada" ? `<button class="btn btn-filled" data-action="approve" data-id="${p.id}"><span class="ms">check</span>Aprobar para el cliente</button>${p.approval==="pendiente"?`<button class="btn btn-text" data-action="reject" data-id="${p.id}">Rechazar</button>`:""}` : "";
   openDlg(`<div class="dlg">
-    ${head(esc(p.title))}
+    ${head(`${esc(p.title)}<small class="dlg-sub"><span class="ms">location_on</span>${esc(addrOf(p))}</small>`)}
     <div class="dlg-body">
       <div class="detail-grid">
         <div>
@@ -1309,7 +1325,7 @@ function detailDlg(p){
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
             ${staff&&p.approval!=="aprobada"?`<span class="status s-${p.approval}">${p.approval==="pendiente"?"Por aprobar":"No aprobada"}</span>`:""}
             <span class="status s-${p.status}">${STATUS[p.status].label}</span>
-            ${p.rank&&!["nueva","descartada"].includes(p.status)?`<span class="status" style="background:var(--ink);color:#fff">Prioridad #${p.rank}</span>`:""}
+            ${p.rank&&!["nueva","leida","descartada"].includes(p.status)?`<span class="status" style="background:var(--ink);color:#fff">Prioridad #${p.rank}</span>`:""}
           </div>
           <div class="price" style="font-size:30px;margin-top:10px">${usd(p.price)}</div>
           <div class="exp">${p.expensas?ars(p.expensas)+" de expensas por mes":"Sin expensas"}${p.price&&p.m2?" · USD "+fmtNum(Math.round(p.price/p.m2))+" por m²":""}</div>
@@ -1374,7 +1390,7 @@ function visitForm(v, presetProp, quick){
   openDlg(`<form class="dlg" data-form="visit" data-id="${v?v.id:""}" data-quick="${quick?1:""}">
     ${head(v?"Editar visita":"Nueva visita")}
     <div class="dlg-body"><div class="form">
-      ${quick ? `<div class="field"><input type="hidden" id="v-prop" value="${p0.id}"><div class="vpick"><img referrerpolicy="no-referrer" src="${cover(p0)}" alt=""><div><b>${esc(p0.title)}</b><small>${esc(p0.barrio||"")} · ${usd(p0.price)}</small></div></div><span class="help">Nombre y ubicación tomados de la publicación. Completá el día y la hora.</span></div>` : `<div class="field"><label for="v-prop">Propiedad</label><select id="v-prop" data-action-change="visit-prop">${opts.map(p=>`<option value="${p.id}" ${p.id===e.propId?"selected":""}>${p.rank&&!["nueva"].includes(p.status)?"#"+p.rank+" · ":""}${esc(p.title)} · ${esc(p.barrio)}</option>`).join("")}</select><span class="help">El nombre de la visita se toma de la publicación.</span></div>`}
+      ${quick ? `<div class="field"><input type="hidden" id="v-prop" value="${p0.id}"><div class="vpick"><img referrerpolicy="no-referrer" src="${cover(p0)}" alt=""><div><b>${esc(p0.title)}</b><small>${esc(addrOf(p0))} · ${usd(p0.price)}</small></div></div><span class="help">Nombre y ubicación tomados de la publicación. Completá el día y la hora.</span></div>` : `<div class="field"><label for="v-prop">Propiedad</label><select id="v-prop" data-action-change="visit-prop">${opts.map(p=>`<option value="${p.id}" ${p.id===e.propId?"selected":""}>${p.rank&&!["nueva"].includes(p.status)?"#"+p.rank+" · ":""}${esc(p.title)} · ${esc(addrOf(p))}</option>`).join("")}</select><span class="help">El nombre de la visita se toma de la publicación.</span></div>`}
       <div class="field t"><label for="v-date">Fecha</label><input id="v-date" type="date" required value="${e.date}" ${quick?"autofocus":""} data-action-change="visit-check"></div>
       <div class="field t"><label for="v-time">Hora</label><input id="v-time" type="time" required step="900" value="${e.time}" data-action-change="visit-check"></div>
       <div class="field t"><label for="v-dur">Duración</label><select id="v-dur" data-action-change="visit-check">${[30,45,60,90].map(m=>`<option value="${m}" ${+e.duration===m?"selected":""}>${m} min</option>`).join("")}</select></div>
@@ -1403,7 +1419,7 @@ function resultForm(v){
   UI.visitRating = v.result ? v.result.rating : null;
   openDlg(`<form class="dlg" data-form="result" data-id="${v.id}">
     ${head("¿Cómo fue la visita?")}
-    <div class="dlg-body"><p style="margin:0 0 14px;color:var(--ink-2)">${esc(p.title)} · ${fmtDateLong(v.date)}</p>
+    <div class="dlg-body"><p style="margin:0 0 14px;color:var(--ink-2)">${esc(p.title)} · ${esc(addrOf(p))} · ${fmtDateLong(v.date)}</p>
       <div class="rate" role="group" aria-label="Impresión">${Object.entries(RATING).map(([k,r])=>`<button type="button" data-action="rate" data-k="${k}" aria-pressed="${UI.visitRating===k}"><span class="ms">${r.icon}</span>${r.label}</button>`).join("")}</div>
       <div class="form" style="margin-top:16px">
         <div class="field"><label for="r-note">Comentarios</label><textarea id="r-note" placeholder="Luz, ruidos, estado, lo que haya que revisar…">${esc(v.result?v.result.note:"")}</textarea></div>
@@ -1487,7 +1503,7 @@ document.addEventListener("click", async e => {
       const rr = t.getBoundingClientRect(); menuEl.style.left = Math.max(12, rr.right - menuEl.offsetWidth) + "px";
       break;
     }
-    case "open-src": { const p = prop(id); if (p && p.url) window.open(p.url, "_blank", "noopener"); break; }
+    case "open-src": { const p = prop(id); if (p && p.url) window.open(p.url, "_blank", "noopener"); if (markRead(p)) commit(); break; }
     case "card-visit": {
       const p = prop(id);
       if (p.approval!=="aprobada"){ snack(isBroker() ? "Aprobá la propiedad primero para poder agendar la visita." : "El broker tiene que aprobar la propiedad antes de agendar."); break; }
@@ -1498,7 +1514,7 @@ document.addEventListener("click", async e => {
     case "card-del": {
       const p = prop(id);
       const nv = o.visits.filter(v=>v.propId===id).length;
-      openDlg(`<div class="dlg">${head("¿Eliminar esta propiedad?")}<div class="dlg-body"><div class="vpick"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.barrio||"")} · ${usd(p.price)}</small></div></div><p style="color:var(--ink-2);margin:14px 0 0">Se quita de la lista para todos, también para el cliente${nv?`, y se cancela${nv>1?"n sus "+nv+" visitas":" su visita"} en la agenda`:""}. No se puede deshacer.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="card-del-ok" data-id="${id}"><span class="ms">delete</span>Eliminar</button></div></div>`);
+      openDlg(`<div class="dlg">${head("¿Eliminar esta propiedad?")}<div class="dlg-body"><div class="vpick"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(addrOf(p))} · ${usd(p.price)}</small></div></div><p style="color:var(--ink-2);margin:14px 0 0">Se quita de la lista para todos, también para el cliente${nv?`, y se cancela${nv>1?"n sus "+nv+" visitas":" su visita"} en la agenda`:""}. No se puede deshacer.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="card-del-ok" data-id="${id}"><span class="ms">delete</span>Eliminar</button></div></div>`);
       break;
     }
     case "card-del-ok": {
@@ -1579,11 +1595,11 @@ document.addEventListener("click", async e => {
       break;
     }
     case "reject": { const p = prop(id); p.approval = "rechazada"; logp(p,"No aprobada por Broker"); if (dlg.open) detailDlg(p); commit("Propiedad marcada como no aprobada"); break; }
-    case "want": { const p = prop(id); const n = ranked().length+1; p.status = "leida"; p.rank = n; logp(p,`${S.session.name} la marcó para visitar (prioridad ${n})`); if (dlg.open) closeDlg(); commit("Agregada a tu ranking en el puesto "+n); break; }
+    case "want": { const p = prop(id); const n = ranked().length+1; p.status = "para_agendar"; p.rank = n; logp(p,`${S.session.name} la marcó para visitar (prioridad ${n})`); if (dlg.open) closeDlg(); commit("Lista para agendar. Quedó en tu ranking en el puesto "+n); break; }
     case "discard": {
       const p = prop(id);
       openDlg(`<form class="dlg" data-form="discard" data-id="${p.id}">${head("¿Descartar esta propiedad?")}<div class="dlg-body">
-        <div class="vpick"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.barrio||"")} · ${usd(p.price)}</small></div></div>
+        <div class="vpick"><img referrerpolicy="no-referrer" src="${cover(p)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(addrOf(p))} · ${usd(p.price)}</small></div></div>
         <div class="form" style="margin-top:16px"><div class="field"><label for="ds-reason">¿Por qué? (opcional, ayuda a tu broker a buscar mejor)</label><input id="ds-reason" autofocus placeholder="Ej.: Queda lejos del trabajo"></div></div>
         <p style="color:var(--ink-2);margin:12px 0 0;font-size:14px">No se borra: pasa a <b>Descartadas</b> y la podés volver a considerar cuando quieras.</p>
       </div><div class="dlg-foot"><button type="button" class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-filled" type="submit">Descartar</button></div></form>`);
@@ -1610,8 +1626,8 @@ document.addEventListener("click", async e => {
       if (st==="descartada"){ p.choiceNote = $("#d-reason").value.trim(); p.rank = null; }
       if (st!==prev){
         p.status = st;
-        if (!["nueva","descartada"].includes(st) && p.rank==null) p.rank = ranked().length+1;
-        if (st==="nueva") p.rank = null;
+        if (!["nueva","leida","descartada"].includes(st) && p.rank==null) p.rank = ranked().length+1;
+        if (st==="nueva" || st==="leida") p.rank = null;
         let txt = "Estado: "+STATUS[st].label;
         if (st==="oferta" && p.offer.price) txt += ` · USD ${fmtNum(p.offer.price)}${p.offer.deposit?" con USD "+fmtNum(p.offer.deposit)+" de depósito":""}`;
         if (st==="negociacion" && p.nego.counter) txt += ` · contraoferta USD ${fmtNum(p.nego.counter)}`;
@@ -1628,12 +1644,12 @@ document.addEventListener("click", async e => {
       if (UI.confirmDelete !== id){ UI.confirmDelete = id; t.classList.replace("btn-text","btn-danger"); t.textContent = "Confirmar cancelación"; break; }
       const v = o.visits.find(x=>x.id===id); const p = prop(v.propId);
       o.visits = o.visits.filter(x=>x.id!==id);
-      if (p.status==="por_visitar" && !o.visits.some(x=>x.propId===p.id && x.state==="confirmada")) p.status = "leida";
+      if (p.status==="por_visitar" && !o.visits.some(x=>x.propId===p.id && x.state==="confirmada")) p.status = "para_agendar";
       logp(p,`Visita del ${fmtDateShort(v.date)} cancelada`); closeDlg(); commit("Visita cancelada"); break;
     }
     case "confirm-visit": {
       const v = o.visits.find(x=>x.id===id); const p = prop(v.propId);
-      v.state = "confirmada"; if (["nueva","leida"].includes(p.status)){ p.status = "por_visitar"; if (p.rank==null) p.rank = ranked().length+1; }
+      v.state = "confirmada"; if (["nueva","leida","para_agendar"].includes(p.status)){ p.status = "por_visitar"; if (p.rank==null) p.rank = ranked().length+1; }
       logp(p, `Visita confirmada: ${fmtDateShort(v.date)} ${v.time}`); if (dlg.open) closeDlg(); commit("Visita confirmada. El cliente ya la ve en su agenda"); break;
     }
     case "reject-visit": {
@@ -1926,12 +1942,12 @@ document.addEventListener("submit", async e => {
     const data = {propId:val("#v-prop"), date:val("#v-date"), time:val("#v-time"), duration:+val("#v-dur"), address:val("#v-addr")};
     const p = prop(data.propId);
     if (id){ const v = o.visits.find(x=>x.id===id); const moved = v.date!==data.date || v.time!==data.time; const wasRejected = v.state==="rechazada"; Object.assign(v, data);
-      if (wasRejected){ v.state = isBroker() ? "confirmada" : "propuesta"; delete v.rejectedBy; delete v.clientReason; delete v.rejectedName; notices().forEach(n=>{ if (n.visitId===v.id){ n.seen = ["broker","asistente"]; } }); if (isBroker() && ["nueva","leida"].includes(p.status)) p.status = "por_visitar"; }
+      if (wasRejected){ v.state = isBroker() ? "confirmada" : "propuesta"; delete v.rejectedBy; delete v.clientReason; delete v.rejectedName; notices().forEach(n=>{ if (n.visitId===v.id){ n.seen = ["broker","asistente"]; } }); if (isBroker() && ["nueva","leida","para_agendar"].includes(p.status)) p.status = "por_visitar"; }
       else if (moved && !isBroker()) v.state = "propuesta"; logp(p, `Visita reprogramada: ${fmtDateShort(v.date)} ${v.time}`); }
     else {
       const v = Object.assign({id:uid("v"), state: isBroker()?"confirmada":"propuesta", result:null}, data);
       o.visits.push(v);
-      if (isBroker() && ["nueva","leida"].includes(p.status)){ p.status = "por_visitar"; if (p.rank==null) p.rank = ranked().length+1; }
+      if (isBroker() && ["nueva","leida","para_agendar"].includes(p.status)){ p.status = "por_visitar"; if (p.rank==null) p.rank = ranked().length+1; }
       logp(p, `Visita ${isBroker()?"confirmada":"propuesta"}: ${fmtDateShort(v.date)} ${v.time}`);
       UI.weekStart = ymd(weekMonday(parseYmd(v.date)));
     }
@@ -1948,9 +1964,9 @@ document.addEventListener("submit", async e => {
   if (kind === "client-reject"){
     const v = o.visits.find(x=>x.id===f.dataset.id); const p = prop(v.propId);
     v.state = "rechazada"; v.rejectedBy = "cliente"; v.clientReason = val("#cr-reason"); v.rejectedName = S.session.name;
-    if (p.status==="por_visitar" && !o.visits.some(x=>x.propId===p.id && x.state==="confirmada")) p.status = "leida";
+    if (p.status==="por_visitar" && !o.visits.some(x=>x.propId===p.id && x.state==="confirmada")) p.status = "para_agendar";
     logp(p, `${S.session.name} no puede ir a la visita del ${fmtDateShort(v.date)} ${v.time}${v.clientReason?": "+v.clientReason:""}`);
-    notify(`${S.session.name} no puede ir a la visita del ${fmtDateShort(v.date)} ${v.time} · ${p.title}`, {visitId:v.id, propId:p.id, reason:v.clientReason});
+    notify(`${S.session.name} no puede ir a la visita del ${fmtDateShort(v.date)} ${v.time} · ${p.title} (${addrOf(p)})`, {visitId:v.id, propId:p.id, reason:v.clientReason});
     closeDlg(); commit("Listo. Le avisamos al broker y al asistente"); return;
   }
   if (kind === "result"){
@@ -2168,7 +2184,7 @@ async function bootServer(){
 async function loadEnv(envId, keepRole){
   const d = await api(`/env/${encodeURIComponent(envId)}`);
   UI.env = d.env; UI.envRole = d.role; UI.team = null;
-  S.ops = d.ops;
+  S.ops = d.ops.map(migrateOp);
   SYNC.snap = {}; d.ops.forEach(o => SYNC.snap[o.id] = snapOf(o));
   const colab = d.role === "colaborador";
   const role = (S.session.super && keepRole) ? S.session.role : (colab ? "broker" : d.role);
@@ -2236,7 +2252,7 @@ async function syncNow(){
         } else { S.ops[i]._v = r.op._v; SYNC.snap[o.id] = sent; SYNC.again = true; }
       } catch(e){
         if (e.status === 409 && e.data.op){
-          const i = S.ops.findIndex(x=>x.id===o.id); if (i >= 0) S.ops[i] = e.data.op;
+          migrateOp(e.data.op); const i = S.ops.findIndex(x=>x.id===o.id); if (i >= 0) S.ops[i] = e.data.op;
           SYNC.snap[o.id] = snapOf(e.data.op); needRender = true; snack(e.message);
         } else if (e.status === 403 || e.status === 400 || e.status === 413){
           snack(e.message); failed = true; await refreshEnv(true);
@@ -2258,6 +2274,7 @@ async function refreshEnv(force){
   let changed = false;
   const ids = new Set(d.ops.map(o=>o.id));
   for (const so of d.ops){
+    migrateOp(so);
     const i = S.ops.findIndex(x=>x.id===so.id);
     const dirty = i >= 0 && SYNC.snap[so.id] !== snapOf(S.ops[i]);
     if (i < 0){ S.ops.push(so); SYNC.snap[so.id] = snapOf(so); changed = true; }
