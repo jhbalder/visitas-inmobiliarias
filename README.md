@@ -50,6 +50,14 @@ Opcionales para la lectura de avisos: `ML_CLIENT_ID`, `ML_CLIENT_SECRET` (Mercad
 
 Después de cargarlas: **Deploys → Trigger deploy → Deploy project**.
 
+### Opcional: direcciones con Google Maps
+
+Al escribir una dirección a mano, la app sugiere direcciones. Con la variable `GOOGLE_MAPS_API_KEY` las sugerencias salen de Google Maps; sin ella, de OpenStreetMap.
+
+1. En [Google Cloud Console](https://console.cloud.google.com/), en el mismo proyecto del acceso con Google: **APIs y servicios → Biblioteca → Places API (New) → Habilitar** (pide tener la facturación activada; el uso de una inmobiliaria suele entrar en el crédito gratuito mensual).
+2. **APIs y servicios → Credenciales → Crear credenciales → Clave de API**. En «Restricciones de API» elegí solo **Places API (New)**.
+3. En Netlify: **Site configuration → Environment variables → Add a variable**: `GOOGLE_MAPS_API_KEY` con esa clave. Después **Deploys → Trigger deploy**.
+
 ## 4. Primer uso
 
 1. Abrí tu sitio y tocá **Continuar con Google** con el mail de superusuario. Entrás al panel **Brokers**.

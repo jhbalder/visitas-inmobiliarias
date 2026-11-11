@@ -279,6 +279,21 @@ details.discarded[open] summary .ms{transform:rotate(90deg)}
 .client-row:first-of-type{border-top:0}
 .client-row .info{flex:1;min-width:0;overflow-wrap:anywhere}
 .client-row > .icon-btn{flex-shrink:0;margin-top:-6px}
+[hidden]{display:none!important}
+.places-list{position:absolute;z-index:20;left:0;right:0;top:calc(100% - 2px);background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;max-height:280px;overflow:auto}
+.places-list button{display:flex;gap:10px;align-items:flex-start;width:100%;border:0;background:none;text-align:left;padding:9px 10px;border-radius:12px;cursor:pointer;font:inherit}
+.places-list button:hover{background:var(--surface-2)}.places-list .ms{color:var(--ink-3);font-size:20px}
+.places-list b{display:block;font-weight:600;font-size:14px}.places-list small{color:var(--ink-3);font-size:12px}
+.places-src{font-size:11px;color:var(--ink-3);text-align:right;padding:4px 8px 2px}
+.searchbar{display:flex;align-items:center;gap:8px;height:48px;padding:0 10px 0 16px;border-radius:24px;background:var(--surface-2);margin-bottom:14px;border:1px solid transparent}
+.searchbar:focus-within{border-color:var(--primary);background:#fff}
+.searchbar>.ms{color:var(--ink-3)}
+.searchbar input{flex:1;border:0;background:transparent;font:inherit;font-size:15px;outline:none;min-width:0;height:100%}
+.searchbar input::-webkit-search-cancel-button{display:none}
+.inv-link{display:block;font-size:12px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:6px 8px;margin-top:6px;word-break:break-all;user-select:all}
+.slot-line{display:flex!important;align-items:center;gap:4px}
+.mini-x{border:0;background:none;width:22px;height:22px;border-radius:11px;display:grid;place-items:center;cursor:pointer;color:var(--ink-3);padding:0}
+.mini-x:hover{background:var(--red-soft);color:var(--red)}.mini-x .ms{font-size:16px}
 .client-row .row-tools{display:flex;gap:2px;flex-shrink:0;margin-top:-6px}
 .client-row .info small{color:var(--ink-3);display:block}
 .oplist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
@@ -683,7 +698,10 @@ function render(){
   if (!S.session){ root.innerHTML = loginHTML(); return; }
   const o = op();
   if (!o){ root.innerHTML = startHTML(); const f = root.querySelector("[autofocus]"); if (f) f.focus(); return; }
+  const ae = document.activeElement, searching = ae && ae.id === "prop-search", caret = searching ? ae.selectionStart : 0;
   root.innerHTML = shellHTML(o);
+  applySearch();
+  if (searching){ const i = $("#prop-search"); if (i){ i.focus(); try { i.setSelectionRange(caret, caret); } catch(e){} } }
   if (UI.pendingImport) setTimeout(tryImport, 0);
 }
 function shellHTML(o){
@@ -817,7 +835,7 @@ function propCard(p, opts={}){
   const st = p.approval==="aprobada" ? `<span class="status s-${p.status}">${STATUS[p.status].label}</span>` : "";
   const lo = linkOnly(p);
   const hasSpecs = [p.amb,p.m2,p.banos,p.cocheras,p.piso,p.pisos].some(x=>x!=null && x!=="");
-  return `<article class="pcard ${opts.dim?'dim':''}${lo?' linkonly':''}" data-action="${lo?"open-src":"open"}" data-id="${p.id}" tabindex="0" aria-label="${esc(p.title)}${lo?" (abre el aviso original)":""}">
+  return `<article data-search="${esc(searchKey(p))}" class="pcard ${opts.dim?'dim':''}${lo?' linkonly':''}" data-action="${lo?"open-src":"open"}" data-id="${p.id}" tabindex="0" aria-label="${esc(p.title)}${lo?" (abre el aviso original)":""}">
     <div class="pimg">${lo && !(p.photos||[]).length ? `<div class="srcph"><span class="ms">open_in_new</span><b>Ver aviso en ${esc(p.portal||"la inmobiliaria")}</b><small>Se abre en una pestaña nueva</small></div>` : `<img referrerpolicy="no-referrer" src="${cover(p)}" alt="">`}
       <div class="tl">${appr}${st}</div>
       ${p.rank && p.status!=="descartada" && p.status!=="nueva" ? `<span class="rankbadge" title="Prioridad del cliente">#${p.rank}</span>`:""}
@@ -842,6 +860,59 @@ function propCard(p, opts={}){
       ${actions?`<div class="pactions">${actions}</div>`:""}
     </div>
   </article>`;
+}
+/* ---------- autocompletado de direcciones (Google Maps) ---------- */
+let placesTimer = null, placesSeq = 0;
+function placesClose(){ document.querySelectorAll(".places-list").forEach(x=>x.remove()); }
+function placesSuggest(input){
+  clearTimeout(placesTimer);
+  const q = input.value.trim();
+  if (UI.server !== true || q.length < 3){ placesClose(); return; }
+  placesTimer = setTimeout(async () => {
+    const seq = ++placesSeq;
+    let d; try { d = await api("/lugares?q=" + encodeURIComponent(q + (input.id==="f-address" && $("#f-barrio") && $("#f-barrio").value ? ", " + $("#f-barrio").value : ""))); } catch(err){ return; }
+    if (seq !== placesSeq || document.activeElement !== input) return;
+    placesClose();
+    if (!d.items || !d.items.length) return;
+    const box = document.createElement("div");
+    box.className = "places-list"; box.setAttribute("role","listbox");
+    box.innerHTML = d.items.map((it,i)=>`<button type="button" role="option" data-i="${i}"><span class="ms">location_on</span><span><b>${esc(it.main)}</b><small>${esc(it.secondary||"")}</small></span></button>`).join("") + `<div class="places-src">${d.source==="google"?"Sugerencias de Google Maps":"Sugerencias de OpenStreetMap"}</div>`;
+    box.addEventListener("mousedown", ev => ev.preventDefault()); // no saca el foco del campo
+    box.addEventListener("click", ev => {
+      const b = ev.target.closest("button[data-i]"); if (!b) return;
+      const it = d.items[+b.dataset.i];
+      input.dataset.filling = "1";
+      if (input.id === "f-address"){
+        input.value = it.main;
+        const loc = $("#f-barrio"); if (loc && it.secondary) loc.value = it.secondary;
+      } else {
+        input.value = it.full || [it.main, it.secondary].filter(Boolean).join(", ");
+        const m = $("#v-map"); if (m) m.href = mapsUrl(input.value);
+      }
+      delete input.dataset.filling;
+      input.classList.add("filled"); placesClose(); input.focus();
+    });
+    input.parentElement.style.position = "relative";
+    input.insertAdjacentElement("afterend", box);
+    box.style.top = (input.offsetTop + input.offsetHeight + 4) + "px";
+  }, 300);
+}
+document.addEventListener("focusout", e => { if (e.target.id==="f-address" || e.target.id==="v-addr") setTimeout(placesClose, 150); });
+document.addEventListener("keydown", e => { if (e.key==="Escape" && document.querySelector(".places-list")){ e.preventDefault(); e.stopPropagation(); placesClose(); } }, true);
+
+/* ---------- buscador por dirección ---------- */
+const normQ = t => deacc(String(t||"").toLowerCase()).replace(/[^a-z0-9ñ]+/g," ").trim();
+const searchKey = p => normQ([p.address, p.barrio, p.title].filter(Boolean).join(" "));
+function searchBarHTML(){
+  return `<div class="searchbar"><span class="ms">search</span><input id="prop-search" type="search" autocomplete="off" placeholder="Buscar por dirección, barrio o título" aria-label="Buscar propiedades por dirección" value="${esc(UI.search||"")}">${UI.search?`<button class="mini-x" data-action="clear-search" aria-label="Borrar búsqueda"><span class="ms">close</span></button>`:""}</div><div id="search-empty" class="empty" hidden><span class="ms">search_off</span>No hay propiedades con «<span id="search-q"></span>».</div>`;
+}
+function applySearch(){
+  const q = normQ(UI.search), words = q ? q.split(" ") : [];
+  const cards = [...document.querySelectorAll("#root article.pcard")];
+  let shown = 0;
+  for (const c of cards){ const ok = !words.length || words.every(w => (c.dataset.search||"").includes(w)); c.hidden = !ok; if (ok) shown++; }
+  document.querySelectorAll("#root .grid").forEach(g => { const any = [...g.children].some(x => !x.hidden); g.hidden = !any; const h = g.previousElementSibling; if (h && h.classList.contains("section-title")) h.hidden = !any; });
+  const em = document.getElementById("search-empty"); if (em){ em.hidden = !(words.length && cards.length && !shown); const sq = document.getElementById("search-q"); if (sq) sq.textContent = UI.search; }
 }
 function rankListHTML(editable){
   const list = ranked();
@@ -873,6 +944,7 @@ function propsHTML(){
     </div>
     <div class="props-layout">
       <div>
+        ${searchBarHTML()}
         <div class="chips" role="tablist" aria-label="Mis propiedades" style="margin-bottom:16px">
           ${[["todas","Todas",fresh.length+ranked().length],["revisar","Para revisar",fresh.length],["elegidas","Elegidas para visitar",ranked().length],["descartadas","Descartadas",disc.length]].map(([k,l,n])=>`<button class="fchip" role="tab" data-action="ctab" data-k="${k}" aria-pressed="${tab===k}" aria-selected="${tab===k}">${tab===k?'<span class="ms" style="font-size:18px">check</span>':""}${l} <span class="n">${n}</span></button>`).join("")}
         </div>
@@ -906,6 +978,7 @@ function propsHTML(){
   </div>
   <div class="props-layout">
     <div>
+      ${searchBarHTML()}
       <div class="chips" role="group" aria-label="Filtrar" style="margin-bottom:16px">
         ${[["todas","Todas"],["pendiente","Por aprobar"],["aprobada","Aprobadas"],["rechazada","No aprobadas"],["descartada","Descartadas por el cliente"]].map(([k,l])=>`<button class="fchip" data-action="pfilter" data-f="${k}" aria-pressed="${f===k}">${f===k?'<span class="ms" style="font-size:18px">check</span>':""}${l} <span class="n">${counts[k]}</span></button>`).join("")}
       </div>
@@ -1045,11 +1118,11 @@ function opHTML(){
       <div class="linkbox"><code>${esc(shareLink(o))}</code><button class="btn btn-tonal btn-sm" data-action="copy-link"><span class="ms">content_copy</span>Copiar</button></div>
       <small style="color:var(--ink-3)">El dominio final lo definís al publicar en Netlify.</small></section>`:""}
     <section class="panel"><h2>Clientes y disponibilidad</h2><p class="hint">Horarios en los que cada cliente puede visitar propiedades.</p>
-      ${o.clients.map(c=>`<div class="client-row"><span class="avatar av-cliente">${esc(initials(c.name))}</span><div class="info"><b>${esc(c.name)}</b>${(c.slots||[]).map(s=>`<small class="num">${esc(slotText(s))}</small>`).join("")}${c.notes?`<small style="margin-top:4px;color:var(--ink-2)">${esc(c.notes)}</small>`:""}</div>${(staff || (S.session.clientId===c.id) || (!staff && S.session.name===c.name))?`<button class="icon-btn" data-action="edit-client" data-id="${c.id}" aria-label="Editar ${esc(c.name)}"><span class="ms">edit</span></button>`:""}</div>`).join("")}
+      ${o.clients.map(c=>{ const can = staff || S.session.clientId===c.id || (!staff && S.session.name===c.name);
+        return `<div class="client-row"><span class="avatar av-cliente">${esc(initials(c.name))}</span><div class="info"><b>${esc(c.name)}</b>${(c.slots||[]).map((s,i)=>`<small class="num slot-line">${esc(slotText(s))}${can?`<button class="mini-x" data-action="del-slot" data-id="${c.id}" data-i="${i}" title="Eliminar esta disponibilidad" aria-label="Eliminar disponibilidad ${esc(slotText(s))}"><span class="ms">close</span></button>`:""}</small>`).join("")}${!(c.slots||[]).length?`<small>Sin disponibilidad cargada</small>`:""}${c.notes?`<small style="margin-top:4px;color:var(--ink-2)">${esc(c.notes)}</small>`:""}</div>${can?`<div class="row-tools"><button class="icon-btn" data-action="edit-client" data-id="${c.id}" title="Editar" aria-label="Editar ${esc(c.name)}"><span class="ms">edit</span></button>${staff?`<button class="icon-btn" data-action="del-client" data-id="${c.id}" title="Eliminar cliente" aria-label="Eliminar ${esc(c.name)}"><span class="ms">delete</span></button>`:""}</div>`:""}</div>`; }).join("")}
+      ${!o.clients.length?`<small style="color:var(--ink-3)">Todavía no hay clientes en esta operación.</small>`:""}
       ${staff?`<button class="btn btn-text" data-action="add-client" style="margin-top:8px"><span class="ms">person_add</span>${UI.server===true?"Agregar cliente sin cuenta":"Agregar cliente"}</button>`:""}
     </section>
-    ${staff?`<section class="panel"><h2>Operaciones</h2><p class="hint">Cambiá de operación para ver sus propiedades y agenda.</p>
-      <ul class="oplist">${S.ops.map(x=>`<li><button data-action="switch-op" data-id="${x.id}" aria-current="${x.id===o.id}"><span class="ms">folder</span><span class="t">${esc(x.name)}</span><small>${x.props.length} prop · ${x.visits.length} visitas</small></button></li>`).join("")}</ul></section>`:""}
     ${staff?`<section class="panel"><h2>Favorito «Enviar a Visitas»</h2><p class="hint">Trae un aviso a la app desde tu navegador, aunque el portal bloquee la lectura automática. Se instala una vez en la barra de favoritos.</p><button class="btn btn-tonal" data-action="bookmarklet"><span class="ms">bookmark_add</span>Instalar el favorito</button></section>`:""}
     ${staff?`<section class="panel"><h2>Permisos por usuario</h2><p class="hint">Qué puede hacer cada rol en esta operación.</p>
       <div class="stack" style="gap:10px;font-size:14px">
@@ -1067,7 +1140,11 @@ function opHTML(){
 const dlg = $("#dlg");
 function openDlg(html, wide){ dlg.className = wide ? "wide" : ""; dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); const f = dlg.querySelector("[autofocus]"); if (f) f.focus(); }
 function closeDlg(){ if (dlg.open) dlg.close(); UI.confirmDelete = null; }
-dlg.addEventListener("click", e => { if (e.target === dlg) closeDlg(); });
+// Se cierra solo si el clic empezó y terminó afuera del cuadro (seleccionar texto arrastrando hacia afuera no lo cierra).
+let dlgDownOutside = false;
+dlg.addEventListener("mousedown", e => { dlgDownOutside = e.target === dlg && outsideBox(e); });
+dlg.addEventListener("click", e => { const ok = dlgDownOutside && e.target === dlg && outsideBox(e); dlgDownOutside = false; if (ok) closeDlg(); });
+function outsideBox(e){ const box = dlg.firstElementChild; if (!box) return true; const r = box.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; }
 const head = (t) => `<div class="dlg-head"><h2>${t}</h2><button type="button" class="icon-btn" data-action="close" aria-label="Cerrar"><span class="ms">close</span></button></div>`;
 
 /* ---------- favorito «Enviar a Visitas» ---------- */
@@ -1684,6 +1761,33 @@ document.addEventListener("click", async e => {
       try { const r = await api(`/invites/${encodeURIComponent(pi.token)}/accept`, { method:"POST" }); UI.me = await api("/me"); await loadEnv(r.envId); snack("Invitación aceptada"); } catch(err){ snack(err.message); }
       break;
     }
+    case "del-slot": {
+      const c = o.clients.find(x=>x.id===id); if (!c) break;
+      const sl = (c.slots||[])[+t.dataset.i]; if (!sl) break;
+      c.slots.splice(+t.dataset.i, 1); commit("Disponibilidad eliminada: " + slotText(sl)); break;
+    }
+    case "del-client": {
+      const c = o.clients.find(x=>x.id===id); if (!c) break;
+      const mem = UI.server===true && c.email && ((UI.team && UI.team.members) || []).find(m=>m.email===c.email && m.role==="cliente" && (m.opIds||[]).includes(o.id));
+      openDlg(`<div class="dlg">${head("¿Eliminar a "+esc(c.name)+"?")}<div class="dlg-body"><p style="margin:0;color:var(--ink-2)">Se borra de la operación <b>${esc(o.name)}</b> con sus horarios y notas.${mem?" También deja de tener acceso a esta búsqueda.":""} Sus opiniones sobre las propiedades quedan guardadas.</p></div><div class="dlg-foot"><button class="btn btn-text" data-action="close">Cancelar</button><button class="btn btn-danger" data-action="del-client-ok" data-id="${c.id}"><span class="ms">delete</span>Eliminar cliente</button></div></div>`);
+      break;
+    }
+    case "del-client-ok": {
+      const c = o.clients.find(x=>x.id===id); if (!c) break;
+      const email = c.email;
+      o.clients = o.clients.filter(x=>x.id!==id); closeDlg(); commit(c.name + " fue eliminado de la operación");
+      const m = UI.server===true && email && ((UI.team && UI.team.members) || []).find(x=>x.email===email && x.role==="cliente" && (x.opIds||[]).includes(o.id));
+      if (m && isOwner()){
+        const rest = (m.opIds||[]).filter(x=>x!==o.id);
+        try {
+          if (rest.length) await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(email)}`, {method:"PUT", body:{opIds:rest}});
+          else await api(`/env/${encodeURIComponent(S.session.envId)}/members/${encodeURIComponent(email)}`, {method:"DELETE"});
+        } catch(err){ snack(err.message); }
+        loadTeam();
+      }
+      break;
+    }
+    case "clear-search": UI.search = ""; { const i = $("#prop-search"); if (i){ i.value = ""; i.focus(); } t.remove(); applySearch(); } break;
     case "retry-boot": S.session = null; render(); bootServer(); break;
     case "admin-cancel": UI.adminLogin = false; render(); break;
     case "logout": if (UI.server === true){ closeMenu(); srvLogout(); break; }
@@ -1736,7 +1840,10 @@ document.addEventListener("change", async e => {
   }
 });
 
-document.addEventListener("input", e => { if (e.target.id==="v-addr"){ const m = $("#v-map"); if (m) m.href = mapsUrl(e.target.value); } });
+document.addEventListener("input", e => {
+  if ((e.target.id==="f-address" || e.target.id==="v-addr") && e.isTrusted !== false && !e.target.dataset.filling) placesSuggest(e.target);
+  if (e.target.id==="prop-search"){ UI.search = e.target.value; applySearch(); const box = e.target.parentElement; const x = box.querySelector(".mini-x"); if (UI.search && !x) box.insertAdjacentHTML("beforeend", `<button class="mini-x" data-action="clear-search" aria-label="Borrar búsqueda"><span class="ms">close</span></button>`); if (!UI.search && x) x.remove(); return; }
+  if (e.target.id==="v-addr"){ const m = $("#v-map"); if (m) m.href = mapsUrl(e.target.value); } });
 
 document.addEventListener("submit", async e => {
   const f = e.target.closest("form[data-form]"); if (!f) return;
@@ -2212,11 +2319,12 @@ function srvOpPanelsHTML(o){
   if (!UI.team){ loadTeam(); UI.team = { loading:true, members:[], invites:[] }; }
   const T = UI.team, staff = isStaff(), broker = isOwner();
   const fmtD = (t) => { const d = new Date(t); return d.getDate()+" "+MONTHS[d.getMonth()]; };
-  const invRow = (i) => `<div class="client-row"><span class="avatar av-${i.type}" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div class="info"><b>${esc(i.name || "Sin nombre")}</b><small>${(ROLE_INFO[i.type]||ROLES.cliente).label} · invitación pendiente · vence ${fmtD(i.expires)}</small></div><div class="row-tools"><button class="icon-btn" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}" title="Copiar link" aria-label="Copiar link"><span class="ms">content_copy</span></button><button class="icon-btn" data-action="revoke-invite" data-id="${esc(i.token)}" title="Eliminar invitación" aria-label="Eliminar invitación"><span class="ms">delete</span></button></div></div>`;
+  const invRow = (i) => `<div class="client-row"><span class="avatar av-${i.type}" style="opacity:.6"><span class="ms" style="font-size:18px">schedule_send</span></span><div class="info"><b>${esc(i.name || "Sin nombre")}</b><small>${(ROLE_INFO[i.type]||ROLES.cliente).label} · invitación pendiente · vence ${fmtD(i.expires)}</small><code class="inv-link">${esc(inviteUrl(i.token))}</code><a class="btn btn-text btn-sm" style="margin-left:-8px" href="https://wa.me/?text=${encodeURIComponent("Te invito a Visitas Inmobiliarias. Entrá con tu cuenta de Google desde este link: " + inviteUrl(i.token))}" target="_blank" rel="noopener"><span class="ms">send</span>Enviar por WhatsApp</a></div><div class="row-tools"><button class="icon-btn" data-action="copy-text" data-text="${esc(inviteUrl(i.token))}" title="Copiar link" aria-label="Copiar link"><span class="ms">content_copy</span></button><button class="icon-btn" data-action="revoke-invite" data-id="${esc(i.token)}" title="Eliminar invitación" aria-label="Eliminar invitación"><span class="ms">delete</span></button></div></div>`;
   const opInvites = T.invites.filter(i => i.type==="cliente" && (i.opIds||[]).includes(o.id));
   const opClients = T.members.filter(m => m.role==="cliente" && (m.opIds||[]).includes(o.id));
   const access = `<section class="panel"><h2>${staff ? "Clientes con acceso" : "Personas en tu búsqueda"}</h2><p class="hint">${staff ? "Cada cliente entra con su cuenta de Google y ve solo esta operación." : "Sumá a otro comprador o a alguien que te ayude a decidir (familia, asesor). Van a ver y opinar sobre las mismas propiedades que vos."}</p>
     ${T.loading ? '<small style="color:var(--ink-3)">Cargando…</small>' : ""}
+    ${staff && opClients.length ? `<div class="linkbox" style="margin:4px 0 8px"><code>${esc(location.origin)}</code><button class="btn btn-tonal btn-sm" data-action="copy-text" data-text="${esc(location.origin)}"><span class="ms">content_copy</span>Copiar</button></div><small style="color:var(--ink-3);display:block;margin-bottom:6px">Los que ya aceptaron entran con este link y su cuenta de Google. A quien no aceptó todavía, reenviale su link de invitación.</small>` : ""}
     ${opClients.map(m=>`<div class="client-row"><span class="avatar av-cliente">${esc(initials(m.name))}</span><div class="info"><b>${esc(m.name)}</b><small>${esc(m.email)}</small></div>${broker?`<button class="icon-btn" data-action="remove-client" data-id="${esc(m.email)}" title="Eliminar cliente de esta operación" aria-label="Eliminar cliente de esta operación"><span class="ms">delete</span></button>`:""}</div>`).join("")}
     ${opInvites.map(invRow).join("")}
     ${!T.loading && !opClients.length && !opInvites.length ? '<small style="color:var(--ink-3)">Todavía nadie tiene acceso a esta búsqueda.</small>' : ""}
